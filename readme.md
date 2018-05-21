@@ -1,4 +1,9 @@
 # EnvConf
+Installing
+```
+go get github.com/antonmashko/envconf
+```
+
 ## What is EnvConf?  
 EnvConf is a Go package, for parsing configuration values from different sources. 
 
