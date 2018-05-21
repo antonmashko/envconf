@@ -25,7 +25,7 @@ func main() {
 ```
 
 - Testings application with different passing params:
-    
+
 a) flag 
 > ./example -field='flag example'   
 > flag example  
@@ -50,3 +50,16 @@ Field1 <string> example_value
         required: false
         description: "this is exaple configurable field"
 ```
+
+### Tags description:
+Priority:   
+1) Flag 
+2) Environment variable 
+3) Default value    
+
+Tags: 
+- flag - name of flag for field [must be unique];   
+- env - name of environment variable for field [must be unique];    
+- default - if nothing set this value will be used; 
+- required - `flag` or `env` value must be setted from outside; 
+- description - description in `help`   
