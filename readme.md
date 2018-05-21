@@ -33,9 +33,9 @@ b) environment variable
 > EXAMPLE_FIELD='env variable example' ./example    
 > env variable example  
 
-c) default value
+c) default value    
 > ./example 
-> example_value
+> example_value 
 
 ## How to get all registred fields?
 To print all values which can be parsed use flag `-help` or `-h`:
