@@ -53,9 +53,11 @@ Field1 <string> example_value
 
 ### Tags description:
 Priority:   
+```
 1) Flag 
 2) Environment variable 
 3) Default value    
+```
 
 Tags: 
 - flag - name of flag for field [must be unique];   
