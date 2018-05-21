@@ -8,8 +8,8 @@ import (
 
 const separator = "/"
 
-//ParseStruct fiend tag(annotations) for each field as set value
-func ParseStruct(data interface{}) error {
+//Parse fiend tag(annotations) for each field as set value
+func Parse(data interface{}) error {
 	if data == nil {
 		return ErrNilData
 	}
