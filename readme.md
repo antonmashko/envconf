@@ -24,7 +24,8 @@ func main() {
 }
 ```
 
-- Testings application with different passing params:   
+- Testings application with different passing params:
+    
 a) flag 
 > ./example -field='flag example'   
 > flag example  
