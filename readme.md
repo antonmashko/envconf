@@ -18,7 +18,7 @@ type Example struct {
 - Parse outside values to `Exaple` struct
 ``` golang
 func main() {
-	var e example
+    var e example
     envconf.Parse(&e)
     println(e.Field1)
 }
@@ -34,10 +34,10 @@ b) environment variable
 > env variable example  
 
 c) default value    
-> ./example 
+> ./example     
 > example_value 
 
-## How to get all registred fields?
+## How to get all registered fields?
 To print all values which can be parsed use flag `-help` or `-h`:
 > ./example -help   
 ```
