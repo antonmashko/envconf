@@ -25,21 +25,21 @@ func main() {
 ```
 
 - Testings application with different passing params:
-a) flag
-> ./example -field='flag example'
-> flag example
+a) flag 
+> ./example -field='flag example'   
+> flag example  
 
-b) environment variable
-> EXAMPLE_FIELD='env variable example' ./example
-> env variable example
+b) environment variable 
+> EXAMPLE_FIELD='env variable example' ./example    
+> env variable example  
 
 c) default value
-> ./example
+> ./example 
 > example_value
 
 ## How to get all registred fields?
 To print all values which can be parsed use flag `-help` or `-h`:
-> ./example -help
+> ./example -help   
 ```
 Usage:
 
