@@ -63,5 +63,5 @@ Field1 <string> example_value
 - flag - name of flag for field [must be unique];   
 - env - name of environment variable for field [must be unique];    
 - default - if nothing set this value will be used; 
-- required - `flag` or `env` value must be setted from outside; 
+- required - on `true` validate value from `flag` or `env` source;  
 - description - description in `help`   
