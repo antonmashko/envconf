@@ -23,7 +23,7 @@ type Example struct {
 - Parse outside values to `Exaple` struct
 ``` golang
 func main() {
-    var e example
+    var e Example
     envconf.Parse(&e)
     println(e.Field1)
 }
