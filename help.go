@@ -31,10 +31,10 @@ func (h *help) print(p *parser) {
 }
 
 func (h *help) printValue(val *value) {
-	//TODO: ащкьфе shound be confirugable
-	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", val.name(), val.tag.Type, val.def)
-	fmt.Fprintf(os.Stdout, "\tflag: %s\n", val.flagv)
-	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.envv)
+	//TODO: help should be configurable
+	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", val.name(), val.tag.Type, val.defaultValue)
+	fmt.Fprintf(os.Stdout, "\tflag: %s\n", val.flagV.name)
+	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.flagV.name)
 	fmt.Fprintf(os.Stdout, "\trequired: %t\n", val.required)
 	fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n\n", val.desc)
 }

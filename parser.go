@@ -6,7 +6,11 @@ import (
 	"reflect"
 )
 
-const separator = "/"
+const Separator = "."
+
+var (
+	ErrNilData = errors.New("nil data")
+)
 
 //Parse fiend tag(annotations) for each field as set value
 func Parse(data interface{}) error {
@@ -41,15 +45,16 @@ func newParser(data interface{}) (*parser, error) {
 
 func newChildParser(parent *parser, rvalue reflect.Value) (*parser, error) {
 	p := &parser{}
-	p.value = rvalue //reflect.ValueOf(data) //get reflect value
+	p.value = rvalue
 	if p.value.Kind() == reflect.Ptr {
-		//check on nil
+		// check on nil
 		if p.value.IsNil() {
 			return nil, errors.New("Data is nil pointer")
 		}
-		p.value = p.value.Elem() //get value fro pointer
+
+		p.value = p.value.Elem() // get value from pointer
 	}
-	p.rtype = p.value.Type() //remembre type
+	p.rtype = p.value.Type() // remember type
 	p.childs = make([]*parser, 0)
 	p.values = make([]*value, 0)
 	p.parent = parent
@@ -99,5 +104,5 @@ func (p *parser) Path() string {
 	if p.parent == nil {
 		return ""
 	}
-	return p.parent.Path() + p.rtype.Name() + separator
+	return p.parent.Path() + Separator + p.rtype.Name()
 }
