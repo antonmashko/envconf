@@ -3,6 +3,7 @@ package envconf
 import (
 	"errors"
 	"flag"
+	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -63,7 +64,7 @@ func (e *envV) define(tag reflect.StructField) {
 	}
 	//get value
 	if e.name != tagIgnored {
-		os.Getenv(e.name)
+		e.value = os.Getenv(e.name)
 	}
 }
 
@@ -96,7 +97,7 @@ func (v *value) name() string {
 	return v.owner.Path() + Separator + v.tag.Name
 }
 
-func (v *value) find() error {
+func (v *value) define() error {
 	ferr := func(err error) error {
 		if v.required {
 			return err
@@ -115,18 +116,24 @@ func (v *value) find() error {
 	}
 	var value string
 	// create correct parse priority
-	for p, f := range priorityQueue {
+	priority := priorityOrder()
+	for _, p := range priority {
+		log.Println("check priopity", p)
 		switch p {
 		case FlagPriority:
 			value = v.flagV.value
 		case EnvPriority:
 			value = v.envV.value
 		case ConfigFilePriority:
-			break // TODO: handle it correct
+			if !v.owner.external.Contains(v.name()) {
+				break
+			}
+			value = v.field.String()
 		case DefaultPriority:
 			value = v.defaultValue
 		}
 		if value != "" {
+			log.Printf("envconf: set variable name=%s value=%s from=%s\n", v.name(), value, p)
 			break
 		}
 	}

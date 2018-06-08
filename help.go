@@ -25,7 +25,7 @@ func (h *help) print(p *parser) {
 	for _, v := range p.values {
 		h.printValue(v)
 	}
-	for _, ch := range p.childs {
+	for _, ch := range p.children {
 		h.print(ch)
 	}
 }
@@ -34,7 +34,7 @@ func (h *help) printValue(val *value) {
 	//TODO: help should be configurable
 	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", val.name(), val.tag.Type, val.defaultValue)
 	fmt.Fprintf(os.Stdout, "\tflag: %s\n", val.flagV.name)
-	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.flagV.name)
+	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.envV.name)
 	fmt.Fprintf(os.Stdout, "\trequired: %t\n", val.required)
 	fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n\n", val.desc)
 }
