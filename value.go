@@ -118,7 +118,6 @@ func (v *value) define() error {
 	// create correct parse priority
 	priority := priorityOrder()
 	for _, p := range priority {
-		log.Println("check priopity", p)
 		switch p {
 		case FlagPriority:
 			value = v.flagV.value

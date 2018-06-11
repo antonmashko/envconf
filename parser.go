@@ -59,9 +59,8 @@ func newChildParser(parent *parser, rvalue reflect.Value, external Config) (*par
 	if p.value.Kind() == reflect.Ptr {
 		// check on nil
 		if p.value.IsNil() {
-			return nil, errors.New("Data is nil pointer")
+			return nil, ErrNilData
 		}
-
 		p.value = p.value.Elem() // get value from pointer
 	}
 	p.rtype = p.value.Type() // remember type

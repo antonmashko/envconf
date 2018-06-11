@@ -36,5 +36,8 @@ func (h *help) printValue(val *value) {
 	fmt.Fprintf(os.Stdout, "\tflag: %s\n", val.flagV.name)
 	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.envV.name)
 	fmt.Fprintf(os.Stdout, "\trequired: %t\n", val.required)
-	fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n\n", val.desc)
+	if val.desc == "" {
+		fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n", val.desc)
+	}
+	fmt.Fprintln(os.Stdout)
 }
