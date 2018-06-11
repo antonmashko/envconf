@@ -3,7 +3,6 @@ package envconf
 import (
 	"errors"
 	"flag"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -132,7 +131,7 @@ func (v *value) define() error {
 			value = v.defaultValue
 		}
 		if value != "" {
-			log.Printf("envconf: set variable name=%s value=%s from=%s\n", v.name(), value, p)
+			elog.Debugf("set variable name=%s value=%s from=%s\n", v.name(), value, p)
 			break
 		}
 	}

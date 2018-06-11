@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"reflect"
+
+	"github.com/antonmashko/envconf/logger"
 )
 
 const Separator = "."
@@ -11,6 +13,15 @@ const Separator = "."
 var (
 	ErrNilData = errors.New("nil data")
 )
+
+var elog = logger.New("envconf", logger.Debug)
+
+func SetLogger(l logger.Logger) {
+	if l == nil {
+		return
+	}
+	elog = l
+}
 
 //Parse fiend tag(annotations) for each field as set value
 func Parse(data interface{}) error {
