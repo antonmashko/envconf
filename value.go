@@ -93,7 +93,11 @@ func newValue(field reflect.Value, tag reflect.StructField) *value {
 }
 
 func (v *value) name() string {
-	return v.owner.Path() + Separator + v.tag.Name
+	op := v.owner.Path()
+	if op != "" {
+		op += string(Separator)
+	}
+	return op + v.tag.Name
 }
 
 func (v *value) define() error {
