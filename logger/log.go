@@ -105,18 +105,19 @@ func (l *stdoutLogger) print(level LogLevel, args ...interface{}) {
 	if level > l.level {
 		return
 	}
-	//l.logger.Print(append([]interface{}{level, l.name}, args...))
+	l.logger.Print(append([]interface{}{level, l.logger.Prefix()}, args...)...)
 }
 
 func (l *stdoutLogger) printf(level LogLevel, format string, args ...interface{}) {
 	if level > l.level {
 		return
 	}
-	//l.logger.Printf(append([]interface{}{level, l.name}, args...))
+	l.logger.Printf(format, append([]interface{}{level, l.logger.Prefix()}, args...)...)
 }
 
 func (l *stdoutLogger) println(level LogLevel, args ...interface{}) {
 	if level > l.level {
 		return
 	}
+	l.logger.Println(append([]interface{}{level, l.logger.Prefix()}, args...)...)
 }

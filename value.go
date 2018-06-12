@@ -131,7 +131,7 @@ func (v *value) define() error {
 			value = v.defaultValue
 		}
 		if value != "" {
-			elog.Debugf("set variable name=%s value=%s from=%s\n", v.name(), value, p)
+			elog.Infof("set variable name=%s value=%s from=%s\n", v.name(), value, p)
 			break
 		}
 	}
