@@ -171,7 +171,7 @@ func (v *value) define() error {
 			value, exists = v.defaultV.value()
 		}
 		if exists {
-			elog.Infof("set variable name=%s value=%s from=%s", v.name(), value, p)
+			elog.Infof("envconf: set variable name=%s value=%s from=%s", v.name(), value, p)
 			break
 		}
 	}
