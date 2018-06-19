@@ -32,7 +32,8 @@ func (h *help) print(p *parser) {
 
 func (h *help) printValue(val *value) {
 	// TODO: help should be configurable
-	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", val.name(), val.tag.Type, val.defaultValue)
+	defaultValue, _ := val.defaultV.value()
+	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", val.name(), val.tag.Type, defaultValue)
 	fmt.Fprintf(os.Stdout, "\tflag: %s\n", val.flagV.name)
 	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.envV.name)
 	fmt.Fprintf(os.Stdout, "\trequired: %t\n", val.required)

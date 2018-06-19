@@ -32,8 +32,9 @@ var (
 )
 
 type flagV struct {
-	name  string
-	value string
+	name    string
+	v       string
+	defined bool
 }
 
 func (f *flagV) define(tag reflect.StructField, usage string) {
@@ -44,13 +45,29 @@ func (f *flagV) define(tag reflect.StructField, usage string) {
 		f.name = strings.ToLower(tag.Name)
 	}
 	if f.name != tagIgnored {
-		flag.StringVar(&f.value, f.name, "", usage)
+		flag.Var(f, f.name, usage)
 	}
 }
 
+func (f *flagV) value() (string, bool) {
+	if f.name == tagIgnored {
+		return "", false
+	}
+	return f.v, f.defined
+}
+
+func (f *flagV) Set(value string) error {
+	f.v = value
+	f.defined = true
+	return nil
+}
+
+func (f *flagV) String() string {
+	return f.v
+}
+
 type envV struct {
-	name  string
-	value string
+	name string
 }
 
 func (e *envV) define(tag reflect.StructField) {
@@ -61,21 +78,37 @@ func (e *envV) define(tag reflect.StructField) {
 	} else if e.name == valDefault {
 		e.name = strings.ToUpper(tag.Name)
 	}
-	//get value
+}
+
+func (e *envV) value() (string, bool) {
 	if e.name != tagIgnored {
-		e.value = os.Getenv(e.name)
+		return os.LookupEnv(e.name)
 	}
+	return "", false
+}
+
+type defaultV struct {
+	defined bool
+	v       string
+}
+
+func (e *defaultV) define(tag reflect.StructField) {
+	e.v, e.defined = tag.Tag.Lookup(tagDefault)
+}
+
+func (e *defaultV) value() (string, bool) {
+	return e.v, e.defined
 }
 
 type value struct {
-	owner        *parser
-	field        reflect.Value
-	tag          reflect.StructField
-	flagV        flagV  // flag value
-	envV         envV   // env value
-	required     bool   // if it defined true, value should be defined
-	defaultValue string // default value
-	desc         string // description
+	owner    *parser
+	field    reflect.Value
+	tag      reflect.StructField
+	flagV    flagV    // flag value
+	envV     envV     // env value
+	defaultV defaultV // default value
+	required bool     // if it defined true, value should be defined
+	desc     string   // description
 }
 
 func newValue(field reflect.Value, tag reflect.StructField) *value {
@@ -84,11 +117,10 @@ func newValue(field reflect.Value, tag reflect.StructField) *value {
 	v.desc = tag.Tag.Get(tagDescription)
 	(&v.flagV).define(tag, v.desc)
 	(&v.envV).define(tag)
+	(&v.defaultV).define(tag)
 	// Parse required
 	rq := tag.Tag.Get(tagRequired)
 	v.required, _ = strconv.ParseBool(rq)
-	// Parse default value
-	v.defaultValue = tag.Tag.Get(tagDefault)
 	return v
 }
 
@@ -117,29 +149,33 @@ func (v *value) define() error {
 	if v.field.Kind() == reflect.Struct {
 		return ferr(errUnsupportedType)
 	}
-	var value string
 	// create correct parse priority
+	var value string
+	var exists bool
 	priority := priorityOrder()
 	for _, p := range priority {
 		switch p {
 		case FlagPriority:
-			value = v.flagV.value
+			value, exists = v.flagV.value()
 		case EnvPriority:
-			value = v.envV.value
+			value, exists = v.envV.value()
 		case ConfigFilePriority:
-			if !v.owner.external.Contains(v.name()) {
+			exists = v.owner.external.Contains(v.name())
+			if !exists {
 				break
+			} else {
+				// setted from external source
+				return nil
 			}
-			value = v.field.String()
 		case DefaultPriority:
-			value = v.defaultValue
+			value, exists = v.defaultV.value()
 		}
-		if value != "" {
+		if exists {
 			elog.Infof("set variable name=%s value=%s from=%s", v.name(), value, p)
 			break
 		}
 	}
-	if value == "" {
+	if !exists {
 		return ferr(errRequiredFiled)
 	}
 	// set value
