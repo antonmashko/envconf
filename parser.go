@@ -16,9 +16,21 @@ var (
 
 // Loggers
 var (
-	traceLogger = &logger{w: os.Stdout}
-	errorLogger = &logger{w: os.Stderr}
+	traceLogger Logger = &logger{w: os.Stdout}
+	errorLogger Logger = &logger{w: os.Stderr}
 )
+
+func SetTraceLogger(logger Logger) {
+	if logger != nil {
+		traceLogger = logger
+	}
+}
+
+func SetErrorLogger(logger Logger) {
+	if logger != nil {
+		errorLogger = logger
+	}
+}
 
 //Parse fiend tag(annotations) for each field as set value
 func Parse(data interface{}) error {

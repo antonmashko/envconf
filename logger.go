@@ -18,6 +18,6 @@ func (l *logger) Printf(format string, args ...interface{}) {
 	fmt.Fprintf(l.w, format, args...)
 }
 
-func (l *logger) Println(format string, args ...interface{}) {
+func (l *logger) Println(args ...interface{}) {
 	fmt.Fprintln(l.w, args...)
 }
