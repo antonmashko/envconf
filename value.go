@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -171,7 +172,7 @@ func (v *value) define() error {
 			value, exists = v.defaultV.value()
 		}
 		if exists {
-			elog.Infof("envconf: set variable name=%s value=%s from=%s", v.name(), value, p)
+			traceLogger.Printf("envconf: set variable name=%s value=%s from=%s", v.name(), value, p)
 			break
 		}
 	}
@@ -187,9 +188,20 @@ func (v *value) define() error {
 		}
 		v.field.SetBool(i)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		i, err := strconv.ParseInt(value, 0, 64)
-		if err != nil {
-			return err
+		var i int64
+		var err error
+		if _, ok := v.field.Interface().(time.Duration); ok {
+			var d time.Duration
+			d, err = time.ParseDuration(value)
+			if err != nil {
+				return err
+			}
+			i = d.Nanoseconds()
+		} else {
+			i, err = strconv.ParseInt(value, 0, 64)
+			if err != nil {
+				return err
+			}
 		}
 		v.field.SetInt(i)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:

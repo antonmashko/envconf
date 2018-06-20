@@ -20,12 +20,12 @@ func (j *JsonConfig) SetFilePathFlag(flagName string, defaultPath string) {
 
 func (j *JsonConfig) RawMessage() []byte {
 	if j.filepath == "" {
-		elog.Infoln("envconf: json filepath is not defined")
+		traceLogger.Println("envconf: json filepath is not defined")
 		return nil
 	}
 	b, err := ioutil.ReadFile(j.filepath)
 	if err != nil {
-		elog.Errorf("envconf: failed to read file=%s error=%s", j.filepath, err)
+		errorLogger.Printf("envconf: failed to read file=%s error=%s", j.filepath, err)
 		return nil
 	}
 	return b
