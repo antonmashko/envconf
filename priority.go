@@ -31,6 +31,10 @@ var priorityQueue = map[Priority]int{
 }
 
 func SetPriority(priority ...Priority) {
+	if len(priority) == 0 {
+		return
+	}
+	priorityQueue = make(map[Priority]int)
 	for i, p := range priority {
 		priorityQueue[p] = i
 	}

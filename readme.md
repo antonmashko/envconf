@@ -1,4 +1,7 @@
 # EnvConf
+
+[![GoDoc](http://godoc.org/github.com/antonmashko/envconf?status.svg)](http://godoc.org/github.com/antonmashko/envconf)
+
 Installing
 ```
 go get github.com/antonmashko/envconf
