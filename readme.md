@@ -1,5 +1,5 @@
 # EnvConf
-
+[![Go Report](https://goreportcard.com/badge/github.com/antonmashko/envconf)](https://goreportcard.com/report/github.com/antonmashko/envconf)
 [![GoDoc](http://godoc.org/github.com/antonmashko/envconf?status.svg)](http://godoc.org/github.com/antonmashko/envconf)
 
 Installing
@@ -70,7 +70,7 @@ Field1 <string> example_value
 
 **Tags**: 
 - flag - name of flag for field [must be unique];   
-- env - name of environment variable for field [must be unique];    
+- env - name of environment variable for field [must be unique];
 - default - if nothing set this value will be used; 
 - required - on `true` validate value from `flag` or `env` source;  
 - description - description in `help`   
