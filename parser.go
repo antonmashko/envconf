@@ -18,7 +18,7 @@ var (
 
 // FlagParsed define this callback when you need handle flags
 // This callback will raise after method flag.Parse()
-// return not nil error interupt pasring
+// return not nil error interrupt pasring
 var FlagParsed func() error
 
 // Loggers
