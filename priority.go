@@ -8,8 +8,8 @@ func (p Priority) String() string {
 		return "Flag"
 	case EnvPriority:
 		return "Environment"
-	case ConfigFilePriority:
-		return "Configuration"
+	case ExternalPriority:
+		return "External"
 	case DefaultPriority:
 		return "Default"
 	}
@@ -19,15 +19,15 @@ func (p Priority) String() string {
 const (
 	FlagPriority Priority = iota
 	EnvPriority
-	ConfigFilePriority
+	ExternalPriority
 	DefaultPriority
 )
 
 var priorityQueue = map[Priority]int{
-	FlagPriority:       0,
-	EnvPriority:        1,
-	ConfigFilePriority: 2,
-	DefaultPriority:    3,
+	FlagPriority:     0,
+	EnvPriority:      1,
+	ExternalPriority: 2,
+	DefaultPriority:  3,
 }
 
 func SetPriority(priority ...Priority) {

@@ -101,6 +101,12 @@ func (e *defaultV) value() (string, bool) {
 	return e.v, e.defined
 }
 
+type Value interface {
+	Owner() Value
+	Name() string
+	Tag() reflect.StructField
+}
+
 type value struct {
 	owner    *parser
 	field    reflect.Value
@@ -112,8 +118,8 @@ type value struct {
 	desc     string   // description
 }
 
-func newValue(field reflect.Value, tag reflect.StructField) *value {
-	v := &value{field: field, tag: tag}
+func newValue(owner *parser, field reflect.Value, tag reflect.StructField) *value {
+	v := &value{field: field, tag: tag, owner: owner}
 	// Parse description
 	v.desc = tag.Tag.Get(tagDescription)
 	(&v.flagV).define(tag, v.desc)
@@ -125,13 +131,38 @@ func newValue(field reflect.Value, tag reflect.StructField) *value {
 	return v
 }
 
-func (v *value) name() string {
-	op := v.owner.Path()
-	if op != "" {
-		op += string(Separator)
+func (v *value) Owner() Value {
+	if v.owner == nil {
+		return nil
 	}
-	return op + v.tag.Name
+	return v.owner
 }
+
+func (v *value) Name() string {
+	return v.tag.Name
+}
+
+func (v *value) Tag() reflect.StructField {
+	return v.tag
+}
+
+func (v *value) fullname() string {
+	result := v.Name()
+	owner := v.owner
+	for owner != nil {
+		result = v.owner.Name() + string(Separator) + result
+		owner = owner.parent
+	}
+	return result
+}
+
+// func (v *value) name() string {
+// 	op := v.owner.Path()
+// 	if op != "" {
+// 		op += string(Separator)
+// 	}
+// 	return op + v.tag.Name
+// }
 
 func (v *value) define() error {
 	ferr := func(err error) error {
@@ -160,19 +191,13 @@ func (v *value) define() error {
 			value, exists = v.flagV.value()
 		case EnvPriority:
 			value, exists = v.envV.value()
-		case ConfigFilePriority:
-			exists = v.owner.external.Contains(v.name())
-			if !exists {
-				break
-			} else {
-				// setted from external source
-				return nil
-			}
+		case ExternalPriority:
+			value, exists = v.owner.external.Get(v)
 		case DefaultPriority:
 			value, exists = v.defaultV.value()
 		}
 		if exists {
-			traceLogger.Printf("envconf: set variable name=%s value=%s from=%s", v.name(), value, p)
+			traceLogger.Printf("envconf: set variable name=%s value=%s from=%s", v.fullname(), value, p)
 			break
 		}
 	}
