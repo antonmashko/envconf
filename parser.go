@@ -11,8 +11,8 @@ import (
 // IgnoreNilData throw ErrNilData error if pointer(s) inside data struct is nil
 var IgnoreNilData = false
 
-// Errors
 var (
+	// ErrNilData mean that exists nil pointer inside data struct
 	ErrNilData = errors.New("nil data")
 )
 
@@ -27,12 +27,14 @@ var (
 	errorLogger Logger = &logger{l: log.New(os.Stderr, "", log.Ltime)}
 )
 
+// SetTraceLogger set logger for  logging trace messages
 func SetTraceLogger(logger Logger) {
 	if logger != nil {
 		traceLogger = logger
 	}
 }
 
+// SetErrorLogger set logger for  logging error messages
 func SetErrorLogger(logger Logger) {
 	if logger != nil {
 		errorLogger = logger

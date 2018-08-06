@@ -1,6 +1,7 @@
 package envconf
 
 import (
+	"log"
 	"testing"
 	"time"
 )
@@ -66,5 +67,21 @@ func TestFlagParsedCallbackOK(t *testing.T) {
 	}
 	if x != 1 {
 		t.Errorf("incorrect value was set. %#v", x)
+	}
+}
+
+func TestSetTraceLoggerOK(t *testing.T) {
+	logger := &log.Logger{}
+	SetTraceLogger(logger)
+	if traceLogger != logger {
+		t.Errorf("Can't set trace logger")
+	}
+}
+
+func TestSetErrorLoggerOK(t *testing.T) {
+	logger := &log.Logger{}
+	SetErrorLogger(logger)
+	if errorLogger != logger {
+		t.Errorf("Can't set error logger")
 	}
 }
