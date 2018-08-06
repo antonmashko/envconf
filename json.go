@@ -102,6 +102,5 @@ func (j *JsonConfig) createJsonConfigValues(val reflect.Value) (values JsonConfi
 			values[typeField.Name] = valueField
 		}
 	}
-
 	return
 }
