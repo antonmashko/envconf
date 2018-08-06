@@ -8,8 +8,7 @@ import (
 	"reflect"
 )
 
-const Separator = "."
-
+// IgnoreNilData throw ErrNilData error if pointer(s) inside data struct is nil
 var IgnoreNilData = false
 
 // Errors
@@ -40,11 +39,14 @@ func SetErrorLogger(logger Logger) {
 	}
 }
 
-//Parse fiend tag(annotations) for each field as set value
+// Parse define variables inside data from different sources,
+// such as flag/environment variable or default value
 func Parse(data interface{}) error {
 	return ParseWithExternal(data, &emptyExt{})
 }
 
+// ParseWithExternal works same as Parse method but also can be used external sources
+// (config files, key-value storages, etc.).
 func ParseWithExternal(data interface{}, external External) error {
 	if data == nil {
 		return ErrNilData

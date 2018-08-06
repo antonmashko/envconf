@@ -3,6 +3,7 @@ package envconf
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -150,7 +151,7 @@ func (v *value) fullname() string {
 	result := v.Name()
 	owner := v.owner
 	for owner != nil && owner.Name() != "" {
-		result = owner.Name() + string(Separator) + result
+		result = fmt.Sprintf("%s.%s", owner.Name(), result)
 		owner = owner.parent
 	}
 	return result

@@ -30,6 +30,8 @@ var priorityQueue = map[Priority]int{
 	DefaultPriority:  3,
 }
 
+// SetPriority can override default priority queue.
+// Default priority queue is: Flag, Environment variable, External source, Default value.
 func SetPriority(priority ...Priority) {
 	if len(priority) == 0 {
 		return

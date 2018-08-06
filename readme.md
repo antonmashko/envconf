@@ -64,7 +64,8 @@ Field1 <string> example_value
 ```
 1) Flag 
 2) Environment variable 
-3) Default value    
+3) External source
+4) Default value
 ```
 
 **Tags**: 
