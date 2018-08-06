@@ -149,8 +149,8 @@ func (v *value) Tag() reflect.StructField {
 func (v *value) fullname() string {
 	result := v.Name()
 	owner := v.owner
-	for owner != nil {
-		result = v.owner.Name() + string(Separator) + result
+	for owner != nil && owner.Name() != "" {
+		result = owner.Name() + string(Separator) + result
 		owner = owner.parent
 	}
 	return result
@@ -192,7 +192,13 @@ func (v *value) define() error {
 		case EnvPriority:
 			value, exists = v.envV.value()
 		case ExternalPriority:
-			value, exists = v.owner.external.Get(v)
+			values := []Value{v}
+			owner := v.owner
+			for owner != nil && owner.Name() != "" {
+				values = append([]Value{owner}, values...)
+				owner = owner.parent
+			}
+			value, exists = v.owner.external.Get(values...)
 		case DefaultPriority:
 			value, exists = v.defaultV.value()
 		}
@@ -247,4 +253,8 @@ func (v *value) define() error {
 		return ferr(errUnsupportedType)
 	}
 	return nil
+}
+
+func (v *value) String() string {
+	return v.Name()
 }

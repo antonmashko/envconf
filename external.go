@@ -1,9 +1,9 @@
 package envconf
 
 type External interface {
-	Get(Value) (string, bool)
+	Get(...Value) (string, bool)
 }
 
-type emptyConfig struct{}
+type emptyExt struct{}
 
-func (c *emptyConfig) Get(v Value) (string, bool) { return "", false }
+func (c *emptyExt) Get(v ...Value) (string, bool) { return "", false }

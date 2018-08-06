@@ -10,15 +10,17 @@ import (
 
 const Separator = "."
 
+var IgnoreNilData = false
+
 // Errors
 var (
 	ErrNilData = errors.New("nil data")
 )
 
-// OnFlagParsed define this callback when you need handle flags
+// FlagParsed define this callback when you need handle flags
 // This callback will raise after method flag.Parse()
 // return not nil error interupt pasring
-var OnFlagParsed func() error
+var FlagParsed func() error
 
 // Loggers
 var (
@@ -40,7 +42,7 @@ func SetErrorLogger(logger Logger) {
 
 //Parse fiend tag(annotations) for each field as set value
 func Parse(data interface{}) error {
-	return ParseWithExternal(data, &emptyConfig{})
+	return ParseWithExternal(data, &emptyExt{})
 }
 
 func ParseWithExternal(data interface{}, external External) error {
@@ -58,12 +60,23 @@ func ParseWithExternal(data interface{}, external External) error {
 		flag.Usage = (&help{p: p}).usage
 	}
 	flag.Parse()
-	if OnFlagParsed != nil {
-		if err = OnFlagParsed(); err != nil {
+	if FlagParsed != nil {
+		if err = FlagParsed(); err != nil {
 			return err
 		}
 	}
 	return p.Parse()
+}
+
+func depointerize(v reflect.Value) (reflect.Value, error) {
+	for v.Kind() == reflect.Ptr {
+		// check on nil
+		if v.IsNil() {
+			return v, ErrNilData
+		}
+		v = v.Elem()
+	}
+	return v, nil
 }
 
 type parser struct {
@@ -77,52 +90,46 @@ type parser struct {
 }
 
 func newParser(data interface{}, external External) (*parser, error) {
-	return newChildParser(nil, reflect.ValueOf(data), external)
+	v, err := depointerize(reflect.ValueOf(data))
+	if err != nil {
+		return nil, err
+	}
+	return newChildParser(nil, v, reflect.StructField{}, external), err
 }
 
-func newChildParser(parent *parser, rvalue reflect.Value, external External) (*parser, error) {
-	p := &parser{external: external}
-	// get value from pointer
-	for rvalue.Kind() == reflect.Ptr {
-		// check on nil
-		if rvalue.IsNil() {
-			return nil, ErrNilData
-		}
-		rvalue = rvalue.Elem()
+func newChildParser(p *parser, v reflect.Value, tag reflect.StructField, e External) *parser {
+	result := &parser{
+		parent:   p,
+		external: e,
+		value:    v,
+		rtype:    v.Type(),
+		tag:      tag,
+		children: make([]*parser, 0),
+		values:   make([]*value, 0),
 	}
-	p.value = rvalue
-	p.rtype = p.value.Type() // remember type
-	p.children = make([]*parser, 0)
-	p.values = make([]*value, 0)
-	p.parent = parent
-	return p, nil
+	return result
 }
 
 func (p *parser) Init() error {
 	for i := 0; i < p.value.NumField(); i++ {
-		v := p.value.Field(i)
-		if v.Kind() == reflect.Ptr {
-			if v.IsNil() {
-				return ErrNilData
+		v, err := depointerize(p.value.Field(i))
+		if err != nil {
+			if IgnoreNilData && err == ErrNilData {
+				continue
 			}
-			v = v.Elem()
+			return err
 		}
-
+		tag := p.rtype.Field(i)
 		if v.Kind() == reflect.Struct {
-			cp, err := newChildParser(p, v, p.external)
-			if err != nil {
-				return err
-			}
+			cp := newChildParser(p, v, tag, p.external)
 			p.children = append(p.children, cp)
 			if err = cp.Init(); err != nil {
 				return err
 			}
 			continue
 		}
-
 		// TODO: check on another type
-		vl := newValue(p, v, p.rtype.Field(i))
-		vl.owner = p
+		vl := newValue(p, v, tag)
 		p.values = append(p.values, vl)
 	}
 	return nil
@@ -152,15 +159,4 @@ func (p *parser) Parse() error {
 		}
 	}
 	return nil
-}
-
-func (p *parser) Path() string {
-	if p.parent == nil {
-		return ""
-	}
-	path := p.parent.Path()
-	if path != "" {
-		path += string(Separator)
-	}
-	return path + p.rtype.Name()
 }
