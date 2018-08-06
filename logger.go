@@ -1,8 +1,7 @@
 package envconf
 
 import (
-	"fmt"
-	"io"
+	"log"
 )
 
 type Logger interface {
@@ -11,13 +10,13 @@ type Logger interface {
 }
 
 type logger struct {
-	w io.Writer
+	l *log.Logger
 }
 
 func (l *logger) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(l.w, format, args...)
+	l.l.Printf(format, args...)
 }
 
 func (l *logger) Println(args ...interface{}) {
-	fmt.Fprintln(l.w, args...)
+	l.l.Println(args...)
 }

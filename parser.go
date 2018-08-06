@@ -3,6 +3,7 @@ package envconf
 import (
 	"errors"
 	"flag"
+	"log"
 	"os"
 	"reflect"
 )
@@ -16,8 +17,8 @@ var (
 
 // Loggers
 var (
-	traceLogger Logger = &logger{w: os.Stdout}
-	errorLogger Logger = &logger{w: os.Stderr}
+	traceLogger Logger = &logger{l: log.New(os.Stdout, "", log.Ltime)}
+	errorLogger Logger = &logger{l: log.New(os.Stderr, "", log.Ltime)}
 )
 
 func SetTraceLogger(logger Logger) {
@@ -75,14 +76,15 @@ func newParser(data interface{}, external Config) (*parser, error) {
 
 func newChildParser(parent *parser, rvalue reflect.Value, external Config) (*parser, error) {
 	p := &parser{external: external}
-	p.value = rvalue
-	if p.value.Kind() == reflect.Ptr {
+	// get value from pointer
+	for rvalue.Kind() == reflect.Ptr {
 		// check on nil
-		if p.value.IsNil() {
+		if rvalue.IsNil() {
 			return nil, ErrNilData
 		}
-		p.value = p.value.Elem() // get value from pointer
+		rvalue = rvalue.Elem()
 	}
+	p.value = rvalue
 	p.rtype = p.value.Type() // remember type
 	p.children = make([]*parser, 0)
 	p.values = make([]*value, 0)
