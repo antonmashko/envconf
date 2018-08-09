@@ -7,10 +7,7 @@ func TestSimpleExternalJsonConfigOK(t *testing.T) {
 	tc := struct {
 		Foo string `default:"fail"`
 	}{}
-	jconf := make(JsonConfig)
-	if err := jconf.Unmarshal([]byte(json)); err != nil {
-		t.Errorf("failed to unmarshal. err=%s", err)
-	}
+	jconf := NewJsonConfig([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -24,10 +21,7 @@ func TestSimpleExternalJsonConfigFieldWithUnderscoreOK(t *testing.T) {
 	tc := struct {
 		FooBar string `json:"foo_bar" default:"fail"`
 	}{}
-	jconf := make(JsonConfig)
-	if err := jconf.Unmarshal([]byte(json)); err != nil {
-		t.Errorf("failed to unmarshal. err=%s", err)
-	}
+	jconf := NewJsonConfig([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -51,10 +45,7 @@ func TestNestedStructExternalJsonConfigOK(t *testing.T) {
 			}
 		}
 	}{}
-	jconf := make(JsonConfig)
-	if err := jconf.Unmarshal([]byte(json)); err != nil {
-		t.Errorf("failed to unmarshal. err=%s", err)
-	}
+	jconf := NewJsonConfig([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -74,14 +65,29 @@ func TestNestedStructExternalJsonConfigFieldWithUnderscoreOK(t *testing.T) {
 			FooBar string `json:"foo_bar" default:"fail"`
 		} `json:"foo_bar"`
 	}{}
-	jconf := make(JsonConfig)
-	if err := jconf.Unmarshal([]byte(json)); err != nil {
-		t.Errorf("failed to unmarshal. err=%s", err)
-	}
+	jconf := NewJsonConfig([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
 	if tc.FooBar.FooBar != "foo_bar" {
 		t.Errorf("incorrect value was set. %#v", tc.FooBar)
+	}
+}
+
+func TestSliceJsonConfigOK(t *testing.T) {
+	json := `{
+		"foo": [
+			1
+		]
+	}`
+	tc := struct {
+		Foo []int
+	}{}
+	jconf := NewJsonConfig([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if len(tc.Foo) != 1 || tc.Foo[0] != 1 {
+		t.Errorf("incorrect value was set. %#v", tc.Foo)
 	}
 }

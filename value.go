@@ -199,12 +199,15 @@ func (v *value) define() error {
 				values = append([]Value{owner}, values...)
 				owner = owner.parent
 			}
-			value, exists = v.owner.external.Get(values...)
+			_, exists = v.owner.external.Get(values...)
 		case DefaultPriority:
 			value, exists = v.defaultV.value()
 		}
 		if exists {
 			traceLogger.Printf("envconf: set variable name=%s value=%s from=%s", v.fullname(), value, p)
+			if p == ExternalPriority {
+				return nil //setted with unmarshal
+			}
 			break
 		}
 	}

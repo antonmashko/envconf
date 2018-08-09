@@ -69,6 +69,9 @@ func ParseWithExternal(data interface{}, external External) error {
 			return err
 		}
 	}
+	if err = external.Unmarshal(data); err != nil {
+		return err
+	}
 	return p.Parse()
 }
 
