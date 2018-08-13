@@ -2,7 +2,6 @@ package envconf
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 )
 
@@ -36,16 +35,12 @@ func (j *JsonConfig) Get(values ...Value) (interface{}, bool) {
 			mp = tmp.(map[string]interface{})
 			break
 		default:
-			return fmt.Sprint(tmp), true
+			return tmp, true
 		}
 	}
 	return nil, false
 }
 
 func (j *JsonConfig) Unmarshal(v interface{}) error {
-	err := json.Unmarshal(j.data, &j.m)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(j.data, v)
+	return json.Unmarshal(j.data, &j.m)
 }

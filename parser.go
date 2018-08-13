@@ -11,10 +11,8 @@ import (
 // IgnoreNilData throw ErrNilData error if pointer(s) inside data struct is nil
 var IgnoreNilData = false
 
-var (
-	// ErrNilData mean that exists nil pointer inside data struct
-	ErrNilData = errors.New("nil data")
-)
+// ErrNilData mean that exists nil pointer inside data struct
+var ErrNilData = errors.New("nil data")
 
 // FlagParsed define this callback when you need handle flags
 // This callback will raise after method flag.Parse()
