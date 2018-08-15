@@ -31,19 +31,23 @@ func (j *JsonConfig) Get(values ...Value) (interface{}, bool) {
 		name = strings.ToLower(name)
 		tmp, ok := mp[name]
 		if !ok {
-			return "", false
+			return nil, false
 		}
 		switch tmp.(type) {
 		case map[string]interface{}:
 			mp = tmp.(map[string]interface{})
 			break
 		default:
-			return tmp, true
+			return nil, true
 		}
 	}
 	return nil, false
 }
 
 func (j *JsonConfig) Unmarshal(v interface{}) error {
-	return json.Unmarshal(j.data, &j.m)
+	err := json.Unmarshal(j.data, &j.m)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(j.data, v)
 }

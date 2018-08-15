@@ -199,6 +199,10 @@ func (v *value) define() error {
 		}
 		if exists {
 			traceLogger.Printf("envconf: set variable name=%s value=%s from=%s", v.fullname(), value, p)
+			if value == nil {
+				// value setted in external source
+				return nil
+			}
 			break
 		}
 	}
