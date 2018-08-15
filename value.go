@@ -271,6 +271,9 @@ func (v *value) err(err error) error {
 	if v.required {
 		return err
 	}
+	if err != nil {
+		errorLogger.Printf("ignoring err=%s for value=%s. value is not required", err, v.fullname())
+	}
 	return nil
 }
 

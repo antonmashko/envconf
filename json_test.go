@@ -7,7 +7,8 @@ func TestSimpleExternalJsonConfigOK(t *testing.T) {
 	tc := struct {
 		Foo string `default:"fail"`
 	}{}
-	jconf := NewJsonConfig([]byte(json))
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -21,7 +22,8 @@ func TestSimpleExternalJsonConfigFieldWithUnderscoreOK(t *testing.T) {
 	tc := struct {
 		FooBar string `json:"foo_bar" default:"fail"`
 	}{}
-	jconf := NewJsonConfig([]byte(json))
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -45,7 +47,8 @@ func TestNestedStructExternalJsonConfigOK(t *testing.T) {
 			}
 		}
 	}{}
-	jconf := NewJsonConfig([]byte(json))
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -65,7 +68,8 @@ func TestNestedStructExternalJsonConfigFieldWithUnderscoreOK(t *testing.T) {
 			FooBar string `json:"foo_bar" default:"fail"`
 		} `json:"foo_bar"`
 	}{}
-	jconf := NewJsonConfig([]byte(json))
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -83,11 +87,50 @@ func TestSliceJsonConfigOK(t *testing.T) {
 	tc := struct {
 		Foo []int
 	}{}
-	jconf := NewJsonConfig([]byte(json))
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
 	if err := ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
 	if len(tc.Foo) != 1 || tc.Foo[0] != 1 {
+		t.Errorf("incorrect value was set. %#v", tc.Foo)
+	}
+}
+
+func TestSliceJsonConfigFloatOk(t *testing.T) {
+	json := `{
+		"foo": [
+			1.1
+		]
+	}`
+	tc := struct {
+		Foo []float32
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if len(tc.Foo) != 1 || tc.Foo[0] != 1.1 {
+		t.Errorf("incorrect value was set. %#v", tc.Foo)
+	}
+}
+
+func TestSliceJsonConfigNegative(t *testing.T) {
+	json := `{
+		"foo": [
+			1.5
+		]
+	}`
+	tc := struct {
+		Foo []int
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if len(tc.Foo) != 1 || tc.Foo[0] != 0 {
 		t.Errorf("incorrect value was set. %#v", tc.Foo)
 	}
 }

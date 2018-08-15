@@ -10,11 +10,14 @@ type JsonConfig struct {
 	data []byte
 }
 
-func NewJsonConfig(jsonData []byte) *JsonConfig {
+func NewJsonConfig() *JsonConfig {
 	return &JsonConfig{
-		m:    make(map[string]interface{}),
-		data: jsonData,
+		m: make(map[string]interface{}),
 	}
+}
+
+func (j *JsonConfig) Read(data []byte) {
+	j.data = data
 }
 
 func (j *JsonConfig) Get(values ...Value) (interface{}, bool) {
