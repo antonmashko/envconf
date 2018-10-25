@@ -190,7 +190,7 @@ func (v *value) define() error {
 			value, exists = v.defaultV.value()
 		}
 		if exists {
-			traceLogger.Printf("envconf: set variable name=%s value=%s from=%s", v.fullname(), value, p)
+			traceLogger.Printf("envconf: set variable name=%s value=%v from=%s", v.fullname(), value, p)
 			if p == ExternalPriority {
 				// value setted in external source
 				return nil
