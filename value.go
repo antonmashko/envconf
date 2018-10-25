@@ -157,14 +157,6 @@ func (v *value) fullname() string {
 	return result
 }
 
-// func (v *value) name() string {
-// 	op := v.owner.Path()
-// 	if op != "" {
-// 		op += string(Separator)
-// 	}
-// 	return op + v.tag.Name
-// }
-
 func (v *value) define() error {
 	// validate reflect value
 	if !v.field.IsValid() {

@@ -31,14 +31,23 @@ func (j *JsonConfig) Get(values ...Value) (interface{}, bool) {
 		name = strings.ToLower(name)
 		tmp, ok := mp[name]
 		if !ok {
-			return nil, false
+			// lookup with ignore case
+			for k, v := range mp {
+				if strings.ToLower(k) == name {
+					tmp = v
+				}
+			}
+			if tmp == nil {
+				// NOTE: not found
+				return nil, false
+			}
 		}
 		switch tmp.(type) {
 		case map[string]interface{}:
 			mp = tmp.(map[string]interface{})
 			break
 		default:
-			return nil, true
+			return tmp, true
 		}
 	}
 	return nil, false

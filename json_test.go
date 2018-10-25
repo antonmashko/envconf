@@ -116,21 +116,27 @@ func TestSliceJsonConfigFloatOk(t *testing.T) {
 	}
 }
 
-// func TestSliceJsonConfigNegative(t *testing.T) {
-// 	json := `{
-// 		"foo": [
-// 			1.5
-// 		]
-// 	}`
-// 	tc := struct {
-// 		Foo []int
-// 	}{}
-// 	jconf := NewJsonConfig()
-// 	jconf.Read([]byte(json))
-// 	if err := ParseWithExternal(&tc, jconf); err != nil {
-// 		t.Errorf("failed to external parse. err=%[1]s err_type=%[1]T", err)
-// 	}
-// 	if len(tc.Foo) != 1 || tc.Foo[0] != 0 {
-// 		t.Errorf("incorrect value was set. %#v", tc.Foo)
-// 	}
-// }
+func TestJsonPropertyCamelCaseOk(t *testing.T) {
+	json := `{
+		"Foo": {
+			"Bar": {
+				"FooBar": "foo_bar"
+			}
+		}
+	}`
+	tc := struct {
+		Foo struct {
+			Bar struct {
+				FooBar string `default:"fail"`
+			}
+		}
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.Foo.Bar.FooBar != "foo_bar" {
+		t.Errorf("incorrect value was set. %#v", tc.Foo)
+	}
+}
