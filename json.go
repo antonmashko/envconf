@@ -54,6 +54,9 @@ func (j *JsonConfig) Get(values ...Value) (interface{}, bool) {
 }
 
 func (j *JsonConfig) Unmarshal(v interface{}) error {
+	if j.data == nil {
+		return nil
+	}
 	err := json.Unmarshal(j.data, &j.m)
 	if err != nil {
 		return err
