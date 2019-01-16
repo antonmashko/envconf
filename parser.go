@@ -3,8 +3,8 @@ package envconf
 import (
 	"errors"
 	"flag"
+	"io/ioutil"
 	"log"
-	"os"
 	"reflect"
 )
 
@@ -20,22 +20,13 @@ var ErrNilData = errors.New("nil data")
 var FlagParsed func() error
 
 // Loggers
-var (
-	traceLogger Logger = &logger{l: log.New(os.Stdout, "", log.Ltime)}
-	errorLogger Logger = &logger{l: log.New(os.Stderr, "", log.Ltime)}
-)
+var debugLogger Logger = &logger{l: log.New(ioutil.Discard, "", log.Ltime)}
 
-// SetTraceLogger set logger for  logging trace messages
-func SetTraceLogger(logger Logger) {
+// SetLogger define debug logger.
+// This logger will print setted values in data fields
+func SetLogger(logger Logger) {
 	if logger != nil {
-		traceLogger = logger
-	}
-}
-
-// SetErrorLogger set logger for  logging error messages
-func SetErrorLogger(logger Logger) {
-	if logger != nil {
-		errorLogger = logger
+		debugLogger = logger
 	}
 }
 

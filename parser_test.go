@@ -2,6 +2,8 @@ package envconf
 
 import (
 	"log"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -15,6 +17,48 @@ func TestParseEmptyStructOK(t *testing.T) {
 func TestNilDataNegative(t *testing.T) {
 	if err := Parse(nil); err == nil || err != ErrNilData {
 		t.Errorf("err doesn't equals to ErrNilData. err=%#v", err)
+	}
+}
+
+func TestParseStringEnvVariableOK(t *testing.T) {
+	const v = "TEST"
+	os.Setenv(v, v)
+	tc := &struct {
+		X string `env:"TEST"`
+	}{}
+	err := Parse(&tc)
+	if err != nil {
+		t.Error("failed to parse. err=", err)
+	}
+	if tc.X != v {
+		t.Errorf("incorrect result of env variable='%s'", tc.X)
+	}
+}
+
+func TestParseIntEnvVariableOK(t *testing.T) {
+	const v = "TEST"
+	const result = 10
+	os.Setenv(v, strconv.Itoa(result))
+	tc := &struct {
+		X int `env:"TEST"`
+	}{}
+	err := Parse(&tc)
+	if err != nil {
+		t.Error("failed to parse. err=", err)
+	}
+	if tc.X != result {
+		t.Errorf("incorrect result of env variable='%d'", tc.X)
+	}
+}
+
+func TestRequiredFieldOK(t *testing.T) {
+	tc := &struct {
+		X string `required:"true"`
+	}{}
+	if err := Parse(&tc); err == nil {
+		t.Error("expected error was not throw.")
+	} else {
+		t.Logf("%#[1]v %[1]T", err)
 	}
 }
 
@@ -70,18 +114,10 @@ func TestFlagParsedCallbackOK(t *testing.T) {
 	}
 }
 
-func TestSetTraceLoggerOK(t *testing.T) {
+func TestSetLoggerOK(t *testing.T) {
 	logger := &log.Logger{}
-	SetTraceLogger(logger)
-	if traceLogger != logger {
-		t.Errorf("Can't set trace logger")
-	}
-}
-
-func TestSetErrorLoggerOK(t *testing.T) {
-	logger := &log.Logger{}
-	SetErrorLogger(logger)
-	if errorLogger != logger {
-		t.Errorf("Can't set error logger")
+	SetLogger(logger)
+	if debugLogger != logger {
+		t.Errorf("Can't set logger")
 	}
 }
