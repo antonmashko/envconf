@@ -27,10 +27,10 @@ const (
 
 var (
 	//errors
-	errInvalidFiled       = errors.New("invalid field")
-	errFiledIsNotSettable = errors.New("field is not settable")
-	errUnsupportedType    = errors.New("unsupported type")
-	errRequiredFiled      = errors.New("required field")
+	errInvalidFiled              = errors.New("invalid field")
+	errFiledIsNotSettable        = errors.New("field is not settable")
+	errUnsupportedType           = errors.New("unsupported type")
+	errConfigurationNotSpecified = errors.New("configuration not specified")
 )
 
 type flagV struct {
@@ -160,13 +160,13 @@ func (v *value) fullname() string {
 func (v *value) define() error {
 	// validate reflect value
 	if !v.field.IsValid() {
-		return v.err(errInvalidFiled)
+		return errInvalidFiled
 	}
 	if !v.field.CanSet() {
-		return v.err(errFiledIsNotSettable)
+		return errFiledIsNotSettable
 	}
 	if v.field.Kind() == reflect.Struct {
-		return v.err(errUnsupportedType)
+		return errUnsupportedType
 	}
 	// create correct parse priority
 	var value interface{}
@@ -190,7 +190,7 @@ func (v *value) define() error {
 			value, exists = v.defaultV.value()
 		}
 		if exists {
-			debugLogger.Printf("envconf: set variable name=%s value=%v from=%s", v.fullname(), value, p)
+			debugLogger.Printf("envconf: set variable name=%s value=%v source=%s", v.fullname(), value, p)
 			if p == ExternalPriority {
 				// value setted in external source
 				return nil
@@ -199,18 +199,18 @@ func (v *value) define() error {
 		}
 	}
 	if !exists {
-		return v.err(errRequiredFiled)
+		return errConfigurationNotSpecified
 	}
 	// set value
 	switch value.(type) {
 	case string:
-		return v.err(setFromString(v.field, (value.(string))))
+		return setFromString(v.field, (value.(string)))
 	case []interface{}:
 		values := value.([]interface{})
 		result := reflect.MakeSlice(v.tag.Type, len(values), cap(values))
 		for i, val := range values {
-			if err := setFromString(result.Index(i), fmt.Sprint(val)); v.err(err) != nil {
-				return v.err(err)
+			if err := setFromString(result.Index(i), fmt.Sprint(val)); err != nil {
+				return err
 			}
 		}
 		v.field.Set(result)
@@ -259,16 +259,6 @@ func setFromString(field reflect.Value, value string) error {
 		field.SetString(value)
 	default:
 		return errUnsupportedType
-	}
-	return nil
-}
-
-func (v *value) err(err error) error {
-	if v.required {
-		return err
-	}
-	if err != nil {
-		debugLogger.Printf("ignoring err=%s for value=%s. value is not required", err, v.fullname())
 	}
 	return nil
 }
