@@ -19,7 +19,6 @@ var ErrNilData = errors.New("nil data")
 // return not nil error interrupt pasring
 var FlagParsed func() error
 
-// Loggers
 var debugLogger Logger = &logger{l: log.New(ioutil.Discard, "", log.Ltime)}
 
 // SetLogger define debug logger.
@@ -146,7 +145,17 @@ func (p *parser) Owner() Value {
 func (p *parser) Parse() error {
 	for _, v := range p.values {
 		if err := v.define(); err != nil {
-			return err
+			if v.required {
+				return &Error{
+					Message:   "failed to define field",
+					Inner:     err,
+					FieldName: v.fullname(),
+				}
+			}
+			if err == errConfigurationNotSpecified {
+				continue
+			}
+			debugLogger.Printf("skipping error due not required field. field=%s err=%s", v.fullname(), err)
 		}
 	}
 	for _, v := range p.children {
