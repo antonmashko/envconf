@@ -28,6 +28,7 @@ func (e *EnvConfig) SetEnv(data io.Reader) error {
 		if err == io.EOF && len(pair) == 0 {
 			return nil
 		}
+		pair = bytes.Trim(pair, "\n")
 		i := bytes.Index(pair, []byte("="))
 		if i == -1 {
 			return ErrInvalidPair
