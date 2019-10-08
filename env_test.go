@@ -12,7 +12,13 @@ func TestSimpleExternalEnvConfigOK(t *testing.T) {
 	tc := struct {
 		Foo string `env:"Foo"`
 	}{}
-	NewEnvConf().SetEnv(env)
+	envf := NewEnvConf()
+	if err := envf.Parse(env); err != nil {
+		t.Error("invalid parse env data:", err)
+	}
+	if err := envf.Set(); err != nil {
+		t.Error("invalid set env variables:", err)
+	}
 	err := Parse(&tc)
 	if err != nil {
 		t.Error(err)
@@ -28,7 +34,13 @@ func TestSimpleExternalEnvConfigFieldWithUnderscoreOK(t *testing.T) {
 	tc := struct {
 		FooBar string `env:"FOO_BAR"`
 	}{}
-	NewEnvConf().SetEnv(env)
+	envf := NewEnvConf()
+	if err := envf.Parse(env); err != nil {
+		t.Error("invalid parse env data:", err)
+	}
+	if err := envf.Set(); err != nil {
+		t.Error("invalid set env variables:", err)
+	}
 	err := Parse(&tc)
 	if err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
@@ -44,7 +56,9 @@ func TestSimpleExternaEnvConfigTwoVariablesOK(t *testing.T) {
 		FooFirst  string `env:"FOO_FIRST"`
 		FooSecond string `env:"FOO_SECOND"`
 	}{}
-	NewEnvConf().SetEnv(env)
+	envf := NewEnvConf()
+	envf.Parse(env)
+	envf.Set()
 	err := Parse(&tc)
 	if err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
@@ -53,6 +67,116 @@ func TestSimpleExternaEnvConfigTwoVariablesOK(t *testing.T) {
 		t.Errorf("incorrect first values was set. %#v", tc.FooFirst)
 	}
 	if tc.FooSecond != "FOO_SECOND" {
+		t.Errorf("incorrect value was set. %#v", tc.FooSecond)
+	}
+}
+
+func TestSimpleExternaEnvConfigTwoVariablesWithCommentOK(t *testing.T) {
+	env := bytes.NewBuffer([]byte("# COMMENT=COMMENT\nFOO_FIRST=FOO_FIRST\nFOO_SECOND=FOO_SECOND\n"))
+	tc := struct {
+		Comment   string `env:"COMMENT"`
+		FooFirst  string `env:"FOO_FIRST"`
+		FooSecond string `env:"FOO_SECOND"`
+	}{}
+	envf := NewEnvConf()
+	if err := envf.Parse(env); err != nil {
+		t.Error("invalid parse env data:", err)
+	}
+	if err := envf.Set(); err != nil {
+		t.Error("invalid set env variables:", err)
+	}
+	err := Parse(&tc)
+	if err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.FooFirst != "FOO_FIRST" {
+		t.Errorf("incorrect first values was set. %#v", tc.FooFirst)
+	}
+	if tc.FooSecond != "FOO_SECOND" {
+		t.Errorf("incorrect value was set. %#v", tc.FooSecond)
+	}
+	if tc.Comment != "" {
+		t.Errorf("incorrect values was set. %#v", tc.Comment)
+	}
+}
+
+func TestSimpleExternaEnvConfigTwoVariablesWithQueteOK(t *testing.T) {
+	env := bytes.NewBuffer([]byte(`FOO_FIRST="FOO_FIRST"
+	FOO_SECOND='FOO_SECOND'`))
+	tc := struct {
+		FooFirst  string `env:"FOO_FIRST"`
+		FooSecond string `env:"FOO_SECOND"`
+	}{}
+	envf := NewEnvConf()
+	if err := envf.Parse(env); err != nil {
+		t.Error("invalid parse env data:", err)
+	}
+	if err := envf.Set(); err != nil {
+		t.Error("invalid set env variables:", err)
+	}
+	err := Parse(&tc)
+	if err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.FooFirst != "FOO_FIRST" {
+		t.Errorf("incorrect first values was set. %#v", tc.FooFirst)
+	}
+	if tc.FooSecond != "FOO_SECOND" {
+		t.Errorf("incorrect value was set. %#v", tc.FooSecond)
+	}
+}
+
+func TestSimpleExternaEnvConfigTwoVariablesEmptyStringOK(t *testing.T) {
+	env := bytes.NewBuffer([]byte(`FOO_FIRST=""
+	FOO_SECOND=''`))
+	tc := struct {
+		FooFirst  string `env:"FOO_FIRST"`
+		FooSecond string `env:"FOO_SECOND"`
+	}{
+		FooFirst:  "foo_first",
+		FooSecond: "foo_second",
+	}
+	envf := NewEnvConf()
+	if err := envf.Parse(env); err != nil {
+		t.Error("invalid parse env data:", err)
+	}
+	if err := envf.Set(); err != nil {
+		t.Error("invalid set env variables:", err)
+	}
+	err := Parse(&tc)
+	if err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.FooFirst != "" {
+		t.Errorf("incorrect first values was set. %#v", tc.FooFirst)
+	}
+	if tc.FooSecond != "" {
+		t.Errorf("incorrect value was set. %#v", tc.FooSecond)
+	}
+}
+
+func TestSimpleExternaEnvConfigTwoVariablesEmptySpaceStringOK(t *testing.T) {
+	env := bytes.NewBuffer([]byte(`FOO_FIRST=" "
+	FOO_SECOND=' '`))
+	tc := struct {
+		FooFirst  string `env:"FOO_FIRST"`
+		FooSecond string `env:"FOO_SECOND"`
+	}{}
+	envf := NewEnvConf()
+	if err := envf.Parse(env); err != nil {
+		t.Error("invalid parse env data:", err)
+	}
+	if err := envf.Set(); err != nil {
+		t.Error("invalid set env variables:", err)
+	}
+	err := Parse(&tc)
+	if err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.FooFirst != " " {
+		t.Errorf("incorrect first values was set. %#v", tc.FooFirst)
+	}
+	if tc.FooSecond != " " {
 		t.Errorf("incorrect value was set. %#v", tc.FooSecond)
 	}
 }
