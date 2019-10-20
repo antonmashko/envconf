@@ -37,7 +37,7 @@ func (e *EnvConfig) Parse(data io.Reader) error {
 				return nil
 			}
 		}
-		n = bytes.Trim(n, " ")
+		n = bytes.TrimSpace(n)
 		n = bytes.Trim(n, "\n")
 		n = bytes.Trim(n, "\t")
 		if n[0] == commentSymbol {
