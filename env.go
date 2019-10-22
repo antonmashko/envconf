@@ -3,6 +3,7 @@ package envconf
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -11,10 +12,6 @@ import (
 
 var (
 	ErrInvalidPair = errors.New("invalid pair for env variable")
-)
-
-const (
-	commentSymbol = '#'
 )
 
 type EnvConfig struct {
@@ -37,6 +34,12 @@ func (e *EnvConfig) Parse(data io.Reader) error {
 				return nil
 			}
 		}
+		// trim comment, but save # if the string is in quotation marks
+		n = trimComment(n)
+		if len(n) == 0 {
+			return nil
+		}
+		fmt.Println(n)
 		// Split env variable to key and value
 		i := strings.Index(n, "=")
 		if i == -1 {
@@ -59,4 +62,27 @@ func (e *EnvConfig) Set() error {
 
 func isTrim(r rune) bool {
 	return unicode.IsSpace(r) || r == '"' || r == '\'' || r == '`'
+}
+
+func trimComment(line string) string {
+	if strings.Contains(line, "#") {
+		segmentsBetweenHashes := strings.Split(line, "#")
+		quotesAreOpen := false
+		var segmentsToKeep []string
+		for _, segment := range segmentsBetweenHashes {
+			if strings.Count(segment, "\"") == 1 || strings.Count(segment, "'") == 1 {
+				if quotesAreOpen {
+					quotesAreOpen = false
+					segmentsToKeep = append(segmentsToKeep, segment)
+				} else {
+					quotesAreOpen = true
+				}
+			}
+			if len(segmentsToKeep) == 0 || quotesAreOpen {
+				segmentsToKeep = append(segmentsToKeep, segment)
+			}
+		}
+		line = strings.Join(segmentsToKeep, "#")
+	}
+	return line
 }
