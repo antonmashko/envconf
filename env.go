@@ -2,11 +2,11 @@ package envconf
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"io"
 	"os"
 	"strings"
+	"unicode"
 )
 
 var (
@@ -28,7 +28,7 @@ func NewEnvConf() *EnvConfig {
 func (e *EnvConfig) Parse(data io.Reader) error {
 	b := bufio.NewReader(data)
 	for {
-		n, err := b.ReadBytes('\n')
+		n, err := b.ReadString('\n')
 		if err != nil {
 			if err != io.EOF {
 				return err
@@ -37,25 +37,12 @@ func (e *EnvConfig) Parse(data io.Reader) error {
 				return nil
 			}
 		}
-		n = bytes.TrimSpace(n)
-		n = bytes.Trim(n, "\n")
-		n = bytes.Trim(n, "\t")
-		if n[0] == commentSymbol {
-			continue
-		}
-		i := bytes.Index(n, []byte("="))
+		// Split env variable to key and value
+		i := strings.Index(n, "=")
 		if i == -1 {
 			return ErrInvalidPair
 		}
-		key := string(n[:i])
-		value := string(n[i+1 : len(n)])
-		if isEmptyLine(value) {
-			e.envs[key] = ""
-			continue
-		}
-		if isQuotes(value, 0, len(value)-1) {
-			value = cutQuotes(value)
-		}
+		key, value := strings.TrimFunc(n[0:i], isTrim), strings.TrimFunc(n[i+1:], isTrim)
 		e.envs[key] = value
 	}
 }
@@ -70,26 +57,6 @@ func (e *EnvConfig) Set() error {
 	return nil
 }
 
-func isEmptyLine(s string) bool {
-	return isQuotes(s, 0, 1)
-}
-
-func cutQuotes(s string) string {
-	if isQuotes(s, 0, len(s)-1) {
-		if string(s[0]) == `"` {
-			s = strings.Trim(s, `"`)
-		} else {
-			s = strings.Trim(s, `'`)
-		}
-	}
-	return s
-}
-
-func isQuotes(s string, first, second int) bool {
-	open := string(s[first])
-	close := string(s[second])
-	if (open == `"` || open == `'`) && open == close {
-		return true
-	}
-	return false
+func isTrim(r rune) bool {
+	return unicode.IsSpace(r) || r == '"' || r == '\'' || r == '`'
 }
