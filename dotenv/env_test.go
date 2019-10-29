@@ -15,10 +15,14 @@ func TestEnvConfigStatusOK(t *testing.T) {
 		{
 			filePath: "./fixtures/basic.env",
 			expectedValues: map[string]string{
-				"OPTION_A": "postgres://localhost:5432/database?sslmode=disable",
-				"OPTION_B": "postgres://localhost:5432/database?sslmode=disable",
-				"OPTION_C": `"postgres://localhost:5432/database?sslmode=disable"`,
-				"OPTION_D": `'postgres://localhost:5432/database?sslmode=disable'`,
+				"OPTION_A":     "foo",
+				"OPTION_B":     "foo_bar",
+				"OPTION_C":     "3.14",
+				"OPTION_D":     "42",
+				"_OPTION_E":    "foo",
+				"____OPTION_F": "bar",
+				"OPTION_G":     "1",
+				"OPTION_H":     "2",
 			},
 		},
 		{
@@ -52,7 +56,14 @@ func TestEnvConfigStatusOK(t *testing.T) {
 				"OPTION_F": "2",
 				"OPTION_G": "",
 				"OPTION_H": `\n`,
-				"OPTION_I": "echo 'asd'",
+				"OPTION_I": `foo 'bar'`,
+				"OPTION_J": `foo"bar"`,
+				"OPTION_K": `"foo`,
+				"OPTION_L": `foo "bar"`,
+				"OPTION_M": `foo \bar\`,
+				"OPTION_N": `\\foo`,
+				"OPTION_O": `foo \"bar\"`,
+				"OPTION_P": "`foo bar`",
 			},
 		},
 		{
@@ -82,7 +93,7 @@ func TestEnvConfigStatusOK(t *testing.T) {
 				t.Error("expected values not contains key:", k)
 			}
 			if values != v {
-				t.Errorf("the expected value is not equal to the value from the file: in the test case=%v !=in the file=%v", values, v)
+				t.Errorf("the expected value is not equal to the value from the file: in the test case=%v !=in the file=%v. Test key: %s", values, v, k)
 			}
 		}
 	}
@@ -107,6 +118,28 @@ func TestEnvConfigParseIncorrectFileStatusError(t *testing.T) {
 		err = envf.Parse(envsFile)
 		err, ok := err.(ErrIncorrectValue)
 		if !ok {
+			t.Errorf("incorrect error type: %T", err)
+		}
+	}
+}
+
+func TestEnvConfigParseIncorrectKeyStatusError(t *testing.T) {
+	type testCase struct {
+		filePath string
+	}
+	testcases := []testCase{
+		{
+			filePath: "./fixtures/nagative_export.env",
+		},
+	}
+	for _, tc := range testcases {
+		envsFile, err := os.Open(tc.filePath)
+		if err != nil {
+			t.Error("cannot open file via path:", tc.filePath)
+		}
+		envf := NewEnvConf()
+		err = envf.Parse(envsFile)
+		if err != ErrInvalidPair {
 			t.Errorf("incorrect error type: %T", err)
 		}
 	}

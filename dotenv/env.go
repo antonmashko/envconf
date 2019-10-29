@@ -27,6 +27,7 @@ var (
 type EnvConfig struct {
 	Envs        map[string]string
 	IsTrimSpace bool
+	Quote       string
 }
 
 func NewEnvConf() *EnvConfig {
@@ -53,6 +54,7 @@ func (e *EnvConfig) Parse(data io.Reader) error {
 func (e *EnvConfig) parseEnvLines(lines []string) error {
 	for _, line := range lines {
 		if strings.Contains(line, "#") {
+			line = strings.TrimSpace(line)
 			line = trimComment(line)
 			// continue if block comment
 			if len(line) == 0 {
@@ -74,14 +76,18 @@ func (e *EnvConfig) parseEnvLines(lines []string) error {
 			return ErrIncorrectValue{Value: key, Symbol: " "}
 		}
 		var err error
-		key, err = trimQuotes(key)
+		key, err = e.trimQuotes(key)
 		if err != nil {
 			return err
 		}
-		value, err = trimQuotes(value)
+		if strings.Contains(key, " ") {
+			return ErrInvalidPair
+		}
+		value, err = e.trimQuotes(value)
 		if err != nil {
 			return err
 		}
+		value = e.trimCharacterEscaping(value)
 		e.Envs[key] = value
 	}
 	return nil
@@ -113,7 +119,7 @@ func (e *EnvConfig) Set() error {
 	return nil
 }
 
-func trimQuotes(s string) (string, error) {
+func (e *EnvConfig) trimQuotes(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	// string contains only space symbols
 	if len(s) == 0 {
@@ -121,12 +127,33 @@ func trimQuotes(s string) (string, error) {
 	}
 	// valide pair quotes
 	if s[0] == '"' || s[0] == '\'' {
+		e.Quote = string(s[0])
 		if s[0] != s[len(s)-1] {
 			return "", ErrNotPairQuotes
 		}
 		s = s[1 : len(s)-1]
 	}
 	return s, nil
+}
+
+func (e *EnvConfig) trimCharacterEscaping(s string) string {
+	if e.Quote == "'" {
+		// remove escaping with '
+		return escaping(s, "'")
+	} else if e.Quote == "\"" {
+		// remove escaping with "
+		return escaping(s, "\"")
+	}
+	return s
+}
+
+func escaping(s, q string) string {
+	for i, j := 0, 1; j < len(s); i, j = i+1, j+1 {
+		if string(s[i]) == `\` && string(s[j]) == q {
+			s = s[:i] + s[i+1:]
+		}
+	}
+	return s
 }
 
 func trimComment(s string) string {
