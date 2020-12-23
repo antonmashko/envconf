@@ -186,15 +186,16 @@ func (v *value) define() error {
 				owner = owner.parent
 			}
 			value, exists = v.owner.external.Get(values...)
+			if exists {
+				return nil
+			} else if value != nil {
+				exists = true
+			}
 		case DefaultPriority:
 			value, exists = v.defaultV.value()
 		}
 		if exists {
 			debugLogger.Printf("envconf: set variable name=%s value=%v source=%s", v.fullname(), value, p)
-			if p == ExternalPriority {
-				// value setted in external source
-				return nil
-			}
 			break
 		}
 	}
