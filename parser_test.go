@@ -1,6 +1,7 @@
 package envconf
 
 import (
+	"os"
 	"testing"
 	"time"
 )
@@ -67,4 +68,25 @@ func TestFlagParsedCallbackOK(t *testing.T) {
 	if x != 1 {
 		t.Errorf("incorrect value was set. %#v", x)
 	}
+}
+
+type foo struct {
+	Bar bar
+}
+
+type bar struct {
+	Data string `env:"data-env"`
+}
+
+func TestHotReload(t *testing.T) {
+	ts := &foo{}
+	f := func(b *bar) {
+		t.Logf("%p %s", b, b.Data)
+	}
+	os.Setenv("data-env", "1")
+	Parse(&ts)
+	f(&ts.Bar)
+	os.Setenv("data-env", "2")
+	Parse(&ts)
+	f(&ts.Bar)
 }
