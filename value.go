@@ -202,13 +202,12 @@ func (v *value) define() error {
 		return errConfigurationNotSpecified
 	}
 	// set value
-	switch value.(type) {
+	switch tv := value.(type) {
 	case string:
-		return setFromString(v.field, (value.(string)))
+		return setFromString(v.field, tv)
 	case []interface{}:
-		values := value.([]interface{})
-		result := reflect.MakeSlice(v.tag.Type, len(values), cap(values))
-		for i, val := range values {
+		result := reflect.MakeSlice(v.tag.Type, len(tv), cap(tv))
+		for i, val := range tv {
 			if err := setFromString(result.Index(i), fmt.Sprint(val)); err != nil {
 				return err
 			}
