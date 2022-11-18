@@ -64,6 +64,10 @@ func ParseWithExternal(data interface{}, external External) error {
 	return p.Parse()
 }
 
+type EnvConf struct {
+	UseCustomHelp bool
+}
+
 type parser struct {
 	value    reflect.Value
 	rtype    reflect.Type

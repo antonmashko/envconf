@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -264,4 +265,17 @@ func setFromString(field reflect.Value, value string) error {
 
 func (v *value) String() string {
 	return v.Name()
+}
+
+func (v *value) Init(val reflect.Value, parent *structType, tag reflect.StructField) error {
+	tmp := newValue(&parser{
+		external: &emptyExt{},
+	}, val, tag)
+	log.Println("->", tag.Name)
+	*v = *tmp
+	return nil
+}
+
+func (v *value) Define() error {
+	return v.define()
 }
