@@ -64,13 +64,6 @@ func ParseWithExternal(data interface{}, external External) error {
 	return p.Parse()
 }
 
-func depointerize(v reflect.Value) reflect.Value {
-	for v.Kind() == reflect.Ptr && !v.IsNil() {
-		v = v.Elem()
-	}
-	return v
-}
-
 type parser struct {
 	value    reflect.Value
 	rtype    reflect.Type
