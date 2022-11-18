@@ -1,9 +1,9 @@
 # EnvConf
 [![Go Report](https://goreportcard.com/badge/github.com/antonmashko/envconf)](https://goreportcard.com/report/github.com/antonmashko/envconf)
 [![GoDoc](http://godoc.org/github.com/antonmashko/envconf?status.svg)](http://godoc.org/github.com/antonmashko/envconf)
-[![Build Status](https://travis-ci.org/antonmashko/envconf.svg)](https://travis-ci.org/antonmashko/envconf)
-[![Codecov](https://img.shields.io/codecov/c/github/antonmashko/envconf.svg)](https://codecov.io/gh/antonmashko/envconf)
-    
+[![Build and Test](https://github.com/antonmashko/envconf/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/antonmashko/envconf/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/antonmashko/envconf/branch/master/graph/badge.svg?token=ZdkG2flKKv)](https://codecov.io/gh/antonmashko/envconf)    
+
 Installing
 ```
 go get github.com/antonmashko/envconf
