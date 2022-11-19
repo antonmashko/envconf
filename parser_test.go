@@ -44,13 +44,12 @@ func TestParsingDurtaionOK(t *testing.T) {
 
 func TestNilValueOK(t *testing.T) {
 	tc := struct {
-		X *string `default:"fail"`
+		X *string `default:"ok"`
 	}{}
-	IgnoreNilData = true
 	if err := Parse(&tc); err != nil {
 		t.Errorf("failed to parse. err=%s", err)
 	}
-	if tc.X != nil {
+	if *tc.X != "ok" {
 		t.Errorf("incorrect value was set. %#v", tc.X)
 	}
 }

@@ -1,7 +1,6 @@
 package envconf
 
 import (
-	"log"
 	"reflect"
 )
 
@@ -21,7 +20,6 @@ func (emptyField) Define() error {
 }
 
 func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField) field {
-	log.Printf("creating type--> %s. Name:%s %p %p %v", v.Kind(), t.Name, p, p.parent, p.parser)
 	switch v.Kind() {
 	case reflect.Struct:
 		return newStructType(v, p, t)

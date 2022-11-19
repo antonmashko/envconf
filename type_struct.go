@@ -60,6 +60,7 @@ func (s *structType) Init() error {
 		if err := f.Init(); err != nil {
 			return err
 		}
+		s.parser.fieldInitialized(f)
 		s.fields[i] = f
 	}
 	return nil
@@ -75,6 +76,9 @@ func (s *structType) Define() error {
 }
 
 func (s *structType) Owner() Value {
+	if s.parent == nil {
+		return nil
+	}
 	return s.parent
 }
 

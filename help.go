@@ -9,36 +9,30 @@ import (
 var UseCustomHelp = true
 
 type help struct {
-	p *parser
+	fields []*primitiveType
 }
 
 func (h *help) usage() {
 	fmt.Fprintln(os.Stdout, "Usage:")
 	fmt.Fprintln(os.Stdout, "")
-	h.print(h.p)
+	h.print()
 }
 
-func (h *help) print(p *parser) {
-	if p == nil {
-		return
-	}
-	for _, v := range p.values {
-		h.printValue(v)
-	}
-	for _, ch := range p.children {
-		h.print(ch)
+func (h *help) print() {
+	for _, f := range h.fields {
+		h.printValue(f)
 	}
 }
 
-func (h *help) printValue(val *value) {
+func (h *help) printValue(f *primitiveType) {
 	// TODO: help should be configurable
-	defaultValue, _ := val.defaultV.value()
-	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", val.fullname(), val.tag.Type, defaultValue)
-	fmt.Fprintf(os.Stdout, "\tflag: %s\n", val.flagV.name)
-	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", val.envV.name)
-	fmt.Fprintf(os.Stdout, "\trequired: %t\n", val.required)
-	if val.desc != "" {
-		fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n", val.desc)
+	defaultValue, _ := f.def.Value()
+	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", fullname(f), f.tag.Type.Name(), defaultValue)
+	fmt.Fprintf(os.Stdout, "\tflag: %s\n", f.flag.Name())
+	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", f.env.Name())
+	fmt.Fprintf(os.Stdout, "\trequired: %t\n", f.required)
+	if f.desc != "" {
+		fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n", f.desc)
 	}
 	fmt.Fprintln(os.Stdout)
 }

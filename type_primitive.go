@@ -2,20 +2,20 @@ package envconf
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 type primitiveType struct {
 	parent   *structType
 	v        reflect.Value
 	tag      reflect.StructField
-	flag     configSource // flag value
-	env      configSource // env value
-	def      configSource // default value
-	required bool         // if it defined true, value should be defined
-	desc     string       // description
+	flag     Var    // flag value
+	env      Var    // env value
+	def      Var    // default value
+	required bool   // if it defined true, value should be defined
+	desc     string // description
 	isSet    bool
 }
 
@@ -50,14 +50,13 @@ func (t *primitiveType) Define() error {
 
 	// create correct parse priority
 	priority := priorityOrder()
-	log.Printf("%v", priority)
 	for _, p := range priority {
-		var source configSource
+		var v Var
 		switch p {
 		case FlagPriority:
-			source = t.flag
+			v = t.flag
 		case EnvPriority:
-			source = t.env
+			v = t.env
 		case ExternalPriority:
 			values := []Value{t}
 			var parent Value = t.parent
@@ -65,7 +64,6 @@ func (t *primitiveType) Define() error {
 				values = append([]Value{parent}, values...)
 				parent = parent.Owner()
 			}
-			log.Printf("%v %v %s", t.parent, t.parent.parser, t.parent.Name())
 			value, exists := t.parent.parser.external.Get(values...)
 			if exists {
 				t.v.Set(reflect.ValueOf(value))
@@ -73,10 +71,10 @@ func (t *primitiveType) Define() error {
 			}
 			continue
 		case DefaultPriority:
-			source = t.def
+			v = t.def
 		}
 
-		if str, ok := source.Value(); ok {
+		if str, ok := v.Value(); ok {
 			// set value
 			t.isSet = true
 			return setFromString(t.v, str)
@@ -96,4 +94,49 @@ func (t *primitiveType) Name() string {
 
 func (t *primitiveType) Tag() reflect.StructField {
 	return t.tag
+}
+
+func setFromString(field reflect.Value, value string) error {
+	switch field.Kind() {
+	case reflect.Bool:
+		i, err := strconv.ParseBool(value)
+		if err != nil {
+			return err
+		}
+		field.SetBool(i)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		var i int64
+		var err error
+		if _, ok := field.Interface().(time.Duration); ok {
+			var d time.Duration
+			d, err = time.ParseDuration(value)
+			if err != nil {
+				return err
+			}
+			i = d.Nanoseconds()
+		} else {
+			i, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return err
+			}
+		}
+		field.SetInt(i)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		i, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		field.SetUint(i)
+	case reflect.Float32, reflect.Float64:
+		i, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return err
+		}
+		field.SetFloat(i)
+	case reflect.String:
+		field.SetString(value)
+	default:
+		return errUnsupportedType
+	}
+	return nil
 }
