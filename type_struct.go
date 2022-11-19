@@ -18,7 +18,8 @@ type structType struct {
 	fields []field
 }
 
-func newParentStructType(v reflect.Value, parser *EnvConf) (*structType, error) {
+func newParentStructType(data interface{}, parser *EnvConf) (*structType, error) {
+	v := reflect.ValueOf(data)
 	for v.Kind() == reflect.Ptr {
 		// check on nil
 		if v.IsNil() {
@@ -37,8 +38,13 @@ func newParentStructType(v reflect.Value, parser *EnvConf) (*structType, error) 
 }
 
 func newStructType(val reflect.Value, parent *structType, tag reflect.StructField) *structType {
+	var p *EnvConf
+	if parent != nil {
+		p = parent.parser
+	}
 	return &structType{
 		parent: parent,
+		parser: p,
 		v:      val,
 		t:      val.Type(),
 		tag:    tag,
@@ -66,4 +72,16 @@ func (s *structType) Define() error {
 		}
 	}
 	return nil
+}
+
+func (s *structType) Owner() Value {
+	return s.parent
+}
+
+func (s *structType) Name() string {
+	return s.tag.Name
+}
+
+func (s *structType) Tag() reflect.StructField {
+	return s.tag
 }

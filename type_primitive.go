@@ -1,6 +1,8 @@
 package envconf
 
 import (
+	"fmt"
+	"log"
 	"reflect"
 	"strconv"
 )
@@ -43,11 +45,12 @@ func (t *primitiveType) Define() error {
 		return errInvalidFiled
 	}
 	if !t.v.CanSet() {
-		return errFiledIsNotSettable
+		return fmt.Errorf("%s: %w", t.Name(), errFiledIsNotSettable)
 	}
 
 	// create correct parse priority
 	priority := priorityOrder()
+	log.Printf("%v", priority)
 	for _, p := range priority {
 		var source configSource
 		switch p {
@@ -56,7 +59,19 @@ func (t *primitiveType) Define() error {
 		case EnvPriority:
 			source = t.env
 		case ExternalPriority:
-			
+			values := []Value{t}
+			var parent Value = t.parent
+			for parent != nil && parent.Name() != "" {
+				values = append([]Value{parent}, values...)
+				parent = parent.Owner()
+			}
+			log.Printf("%v %v %s", t.parent, t.parent.parser, t.parent.Name())
+			value, exists := t.parent.parser.external.Get(values...)
+			if exists {
+				t.v.Set(reflect.ValueOf(value))
+				return nil
+			}
+			continue
 		case DefaultPriority:
 			source = t.def
 		}
@@ -69,4 +84,16 @@ func (t *primitiveType) Define() error {
 	}
 
 	return errConfigurationNotSpecified
+}
+
+func (t *primitiveType) Owner() Value {
+	return t.parent
+}
+
+func (t *primitiveType) Name() string {
+	return t.tag.Name
+}
+
+func (t *primitiveType) Tag() reflect.StructField {
+	return t.tag
 }

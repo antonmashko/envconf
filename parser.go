@@ -29,7 +29,42 @@ func SetLogger(logger Logger) {
 	}
 }
 
-type EnvConf struct{}
+type EnvConf struct {
+	external External
+}
+
+func New() *EnvConf {
+	return NewWithExternal(&emptyExt{})
+}
+
+func NewWithExternal(e External) *EnvConf {
+	return &EnvConf{
+		external: e,
+	}
+}
+
+func (e *EnvConf) Parse(data interface{}) error {
+	p, err := newParentStructType(data, e)
+	if err != nil {
+		return err
+	}
+	if err = p.Init(); err != nil {
+		return err
+	}
+	// if UseCustomHelp {
+	// flag.Usage = (&help{p: p}).usage
+	// }
+	flag.Parse()
+	if FlagParsed != nil {
+		if err = FlagParsed(); err != nil {
+			return err
+		}
+	}
+	if err = e.external.Unmarshal(data); err != nil {
+		return err
+	}
+	return p.Define()
+}
 
 // Parse define variables inside data from different sources,
 // such as flag/environment variable or default value
