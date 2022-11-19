@@ -9,6 +9,10 @@ type field interface {
 	Define() error
 }
 
+type requiredField interface {
+	IsRequired() bool
+}
+
 type emptyField struct{}
 
 func (emptyField) Init() error {

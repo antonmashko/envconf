@@ -68,9 +68,23 @@ func (s *structType) Init() error {
 
 func (s *structType) Define() error {
 	for _, f := range s.fields {
-		if err := f.Define(); err != nil {
+		err := f.Define()
+		if err != nil {
+			if rf, ok := f.(requiredField); ok && rf.IsRequired() {
+				return &Error{
+					Message:   "failed to define field",
+					Inner:     err,
+					FieldName: fullname(f.(Value)),
+				}
+			}
+
+			s.parser.fieldNotDefined(f, err)
+			if err == errConfigurationNotSpecified {
+				continue
+			}
 			return err
 		}
+		s.parser.fieldDefined(f)
 	}
 	return nil
 }

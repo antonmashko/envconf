@@ -46,6 +46,7 @@ func NewWithExternal(e External) *EnvConf {
 	return &EnvConf{
 		external: e,
 		help:     h,
+		Logger:   debugLogger,
 	}
 }
 
@@ -58,6 +59,20 @@ func (e *EnvConf) fieldInitialized(f field) {
 		return
 	}
 	e.help.fields = append(e.help.fields, pt)
+}
+
+func (e *EnvConf) fieldDefined(f field) {
+	pt, ok := f.(*primitiveType)
+	if !ok || pt.definedValue == nil {
+		return
+	}
+	debugLogger.Printf("envconf: set variable name=%s value=%v source=%s",
+		fullname(pt), pt.definedValue.value, pt.definedValue.source)
+}
+
+func (e *EnvConf) fieldNotDefined(f field, err error) {
+	e.Logger.Printf("skipping error due not required field. field=%s err=%s",
+		fullname(f.(Value)), err)
 }
 
 func (e *EnvConf) Parse(data interface{}) error {
@@ -112,95 +127,3 @@ func fullname(v Value) string {
 	}
 	return name
 }
-
-// type parser struct {
-// 	value    reflect.Value
-// 	rtype    reflect.Type
-// 	tag      reflect.StructField
-// 	parent   *parser
-// 	external External
-// 	children []*parser
-// 	values   []*value
-// }
-
-// func newParser(data interface{}, external External) (*parser, error) {
-// 	v, err := depointerize(reflect.ValueOf(data))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return newChildParser(nil, v, reflect.StructField{}, external), err
-// }
-
-// func newChildParser(p *parser, v reflect.Value, tag reflect.StructField, e External) *parser {
-// 	result := &parser{
-// 		parent:   p,
-// 		external: e,
-// 		value:    v,
-// 		rtype:    v.Type(),
-// 		tag:      tag,
-// 		children: make([]*parser, 0),
-// 		values:   make([]*value, 0),
-// 	}
-// 	return result
-// }
-
-// func (p *parser) Init() error {
-// 	for i := 0; i < p.value.NumField(); i++ {
-// 		v, err := depointerize(p.value.Field(i))
-// 		if err != nil {
-// 			if IgnoreNilData && err == ErrNilData {
-// 				continue
-// 			}
-// 			return err
-// 		}
-// 		tag := p.rtype.Field(i)
-// 		if v.Kind() == reflect.Struct {
-// 			cp := newChildParser(p, v, tag, p.external)
-// 			p.children = append(p.children, cp)
-// 			if err = cp.Init(); err != nil {
-// 				return err
-// 			}
-// 			continue
-// 		}
-// 		// TODO: check on another type
-// 		vl := newValue(p, v, tag)
-// 		p.values = append(p.values, vl)
-// 	}
-// 	return nil
-// }
-
-// func (p *parser) Name() string {
-// 	return p.tag.Name
-// }
-
-// func (p *parser) Tag() reflect.StructField {
-// 	return p.tag
-// }
-
-// func (p *parser) Owner() Value {
-// 	return p.parent
-// }
-
-// func (p *parser) Parse() error {
-// 	for _, v := range p.values {
-// 		if err := v.define(); err != nil {
-// 			if v.required {
-// 				return &Error{
-// 					Message:   "failed to define field",
-// 					Inner:     err,
-// 					FieldName: v.fullname(),
-// 				}
-// 			}
-// 			if err == errConfigurationNotSpecified {
-// 				continue
-// 			}
-// 			debugLogger.Printf("skipping error due not required field. field=%s err=%s", v.fullname(), err)
-// 		}
-// 	}
-// 	for _, v := range p.children {
-// 		if err := v.Parse(); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }

@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+type definedValue struct {
+	source Priority
+	value  interface{}
+}
+
 type primitiveType struct {
 	parent   *structType
 	v        reflect.Value
@@ -16,7 +21,8 @@ type primitiveType struct {
 	def      Var    // default value
 	required bool   // if it defined true, value should be defined
 	desc     string // description
-	isSet    bool
+
+	definedValue *definedValue
 }
 
 func newPrimitiveType(val reflect.Value, parent *structType, tag reflect.StructField) *primitiveType {
@@ -31,7 +37,6 @@ func newPrimitiveType(val reflect.Value, parent *structType, tag reflect.StructF
 		def:      newDefaultValueSource(tag),
 		required: required,
 		desc:     desc,
-		isSet:    false,
 	}
 }
 
@@ -75,8 +80,11 @@ func (t *primitiveType) Define() error {
 		}
 
 		if str, ok := v.Value(); ok {
+			t.definedValue = &definedValue{
+				source: p,
+				value:  v,
+			}
 			// set value
-			t.isSet = true
 			return setFromString(t.v, str)
 		}
 	}
@@ -94,6 +102,10 @@ func (t *primitiveType) Name() string {
 
 func (t *primitiveType) Tag() reflect.StructField {
 	return t.tag
+}
+
+func (t *primitiveType) IsRequired() bool {
+	return t.required
 }
 
 func setFromString(field reflect.Value, value string) error {
