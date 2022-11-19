@@ -1,10 +1,8 @@
 package envconf
 
-import "reflect"
-
 type interfaceType struct{}
 
-func (t *interfaceType) Init(val reflect.Value, parent *structType, tag reflect.StructField) error {
+func (t *interfaceType) Init() error {
 	// not supported
 	return nil
 }

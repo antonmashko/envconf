@@ -6,16 +6,24 @@ import (
 
 type ptrType struct {
 	field
-	v   reflect.Value
-	tmp *reflect.Value
-	tag reflect.StructField
+	parent *structType
+	v      reflect.Value
+	tmp    *reflect.Value
+	tag    reflect.StructField
 }
 
-func (f *ptrType) Init(val reflect.Value, parent *structType, tag reflect.StructField) error {
-	f.v = val
-	f.tag = tag
+func newPtrType(val reflect.Value, parent *structType, tag reflect.StructField) *ptrType {
+	return &ptrType{
+		field:  emptyField{},
+		parent: parent,
+		v:      val,
+		tag:    tag,
+		tmp:    nil,
+	}
+}
 
-	tmp := val
+func (f *ptrType) Init() error {
+	tmp := f.v
 	for tmp.Kind() == reflect.Ptr {
 		if tmp.IsNil() {
 			nv := reflect.New(tmp.Type().Elem())
@@ -30,8 +38,8 @@ func (f *ptrType) Init(val reflect.Value, parent *structType, tag reflect.Struct
 		}
 	}
 
-	f.field = createFieldFromValue(tmp)
-	return f.field.Init(tmp, parent, tag)
+	f.field = createFieldFromValue(tmp, f.parent, f.tag)
+	return f.field.Init()
 }
 
 func (f *ptrType) Define() error {

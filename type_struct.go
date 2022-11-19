@@ -7,7 +7,6 @@ import (
 var ErrUnsupportedType = errUnsupportedType
 
 type structType struct {
-	parser *EnvConf
 	parent *structType
 
 	v   reflect.Value
@@ -17,22 +16,26 @@ type structType struct {
 	fields []field
 }
 
-func (s *structType) Init(val reflect.Value, parent *structType, tag reflect.StructField) error {
-	s.parent = parent
-	s.v = val
-	s.t = val.Type()
-	s.tag = tag
-	s.fields = make([]field, s.v.NumField())
+func newStructType(val reflect.Value, parent *structType, tag reflect.StructField) *structType {
+	return &structType{
+		parent: parent,
+		v:      val,
+		t:      val.Type(),
+		tag:    tag,
+		fields: make([]field, val.NumField()),
+	}
+}
 
+func (s *structType) Init() error {
+	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
 		rfield := s.v.Field(i)
-		f := createFieldFromValue(rfield)
-		if err := f.Init(rfield, s, s.t.Field(i)); err != nil {
+		f := createFieldFromValue(rfield, s, s.t.Field(i))
+		if err := f.Init(); err != nil {
 			return err
 		}
 		s.fields[i] = f
 	}
-
 	return nil
 }
 

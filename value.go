@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -203,12 +202,13 @@ func (v *value) define() error {
 		return errConfigurationNotSpecified
 	}
 	// set value
-	switch tv := value.(type) {
+	switch value.(type) {
 	case string:
-		return setFromString(v.field, tv)
+		return setFromString(v.field, (value.(string)))
 	case []interface{}:
-		result := reflect.MakeSlice(v.tag.Type, len(tv), cap(tv))
-		for i, val := range tv {
+		values := value.([]interface{})
+		result := reflect.MakeSlice(v.tag.Type, len(values), cap(values))
+		for i, val := range values {
 			if err := setFromString(result.Index(i), fmt.Sprint(val)); err != nil {
 				return err
 			}
@@ -265,17 +265,4 @@ func setFromString(field reflect.Value, value string) error {
 
 func (v *value) String() string {
 	return v.Name()
-}
-
-func (v *value) Init(val reflect.Value, parent *structType, tag reflect.StructField) error {
-	tmp := newValue(&parser{
-		external: &emptyExt{},
-	}, val, tag)
-	log.Println("->", tag.Name)
-	*v = *tmp
-	return nil
-}
-
-func (v *value) Define() error {
-	return v.define()
 }

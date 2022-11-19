@@ -5,19 +5,36 @@ import (
 )
 
 type field interface {
-	Init(val reflect.Value, parent *structType, tag reflect.StructField) error
+	Init() error
 	Define() error
 }
 
-func createFieldFromValue(v reflect.Value) field {
-	switch v.Kind() {
+type emptyField struct{}
+
+func (emptyField) Init() error {
+	return nil
+}
+
+func (emptyField) Define() error {
+	return nil
+}
+
+func createFieldFromValue(val reflect.Value, parent *structType, tag reflect.StructField) field {
+	switch val.Kind() {
 	case reflect.Struct:
-		return &structType{}
+		return newStructType(val, parent, tag)
 	case reflect.Ptr:
-		return &ptrType{}
+		return newPtrType(val, parent, tag)
 	case reflect.Interface:
+		// in development
 		return &interfaceType{}
+	case reflect.Map, reflect.Slice, reflect.Array:
+		// in development
+		return &collectionType{}
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
+		// unsupported types
+		return emptyField{}
 	default:
-		return &value{}
+		return newPrimitiveType(val, parent, tag)
 	}
 }

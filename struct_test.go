@@ -1,6 +1,7 @@
 package envconf
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -11,6 +12,7 @@ type TestInnerStruct struct {
 }
 
 type testStruct struct {
+	Str   fmt.Stringer
 	Inner ***TestInnerStruct `prefix:"INNER_"`
 }
 
@@ -18,8 +20,8 @@ func TestStructSerialization_Ok(t *testing.T) {
 	os.Setenv("DATA", "foo")
 	input := &testStruct{}
 	// v := depointerize(reflect.ValueOf(input))
-	cfg := &structType{}
-	err := cfg.Init(reflect.ValueOf(input).Elem(), nil, reflect.StructField{})
+	cfg := newStructType(reflect.ValueOf(input).Elem(), nil, reflect.StructField{})
+	err := cfg.Init()
 	if err != nil {
 		t.Fatal(err)
 	}

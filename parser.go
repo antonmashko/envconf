@@ -3,7 +3,6 @@ package envconf
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"reflect"
@@ -64,8 +63,15 @@ func ParseWithExternal(data interface{}, external External) error {
 	return p.Parse()
 }
 
-type EnvConf struct {
-	UseCustomHelp bool
+func depointerize(v reflect.Value) (reflect.Value, error) {
+	for v.Kind() == reflect.Ptr {
+		// check on nil
+		if v.IsNil() {
+			return v, ErrNilData
+		}
+		v = v.Elem()
+	}
+	return v, nil
 }
 
 type parser struct {
@@ -79,15 +85,15 @@ type parser struct {
 }
 
 func newParser(data interface{}, external External) (*parser, error) {
-	v := depointerize(reflect.ValueOf(data))
-	if v.Kind() == reflect.Ptr && v.IsNil() {
-		return nil, ErrNilData
+	v, err := depointerize(reflect.ValueOf(data))
+	if err != nil {
+		return nil, err
 	}
-	return newChildParser(nil, v, reflect.StructField{}, external), nil
+	return newChildParser(nil, v, reflect.StructField{}, external), err
 }
 
 func newChildParser(p *parser, v reflect.Value, tag reflect.StructField, e External) *parser {
-	return &parser{
+	result := &parser{
 		parent:   p,
 		external: e,
 		value:    v,
@@ -96,52 +102,44 @@ func newChildParser(p *parser, v reflect.Value, tag reflect.StructField, e Exter
 		children: make([]*parser, 0),
 		values:   make([]*value, 0),
 	}
+	return result
 }
 
 func (p *parser) Init() error {
 	for i := 0; i < p.value.NumField(); i++ {
-		var err error
-		// in case on pointer
-		var verifyOnSet bool
-		var tmp reflect.Value
-
-		v := depointerize(p.value.Field(i))
+		v, err := depointerize(p.value.Field(i))
+		if err != nil {
+			if IgnoreNilData && err == ErrNilData {
+				continue
+			}
+			return err
+		}
 		tag := p.rtype.Field(i)
-
-		vkind := v.Kind()
-		// if vkind == reflect.Ptr {
-		// 	tmp = v
-		// 	v = reflect.New(v.Type().Elem()).Elem()
-		// 	verifyOnSet = true
-		// }
-
-		if vkind == reflect.Struct {
+		if v.Kind() == reflect.Struct {
 			cp := newChildParser(p, v, tag, p.external)
+			p.children = append(p.children, cp)
 			if err = cp.Init(); err != nil {
 				return err
 			}
-
-			if verifyOnSet {
-				if len(cp.children) <= 0 && len(cp.values) <= 0 {
-					continue
-				}
-				tmp.Set(v) // updating value
-			}
-			p.children = append(p.children, cp)
 			continue
 		}
-
+		// TODO: check on another type
 		vl := newValue(p, v, tag)
-		if verifyOnSet {
-			if v.IsZero() {
-				continue
-			}
-			fmt.Printf("%s\n", v.Elem().Type())
-			tmp.Set(v)
-		}
 		p.values = append(p.values, vl)
 	}
 	return nil
+}
+
+func (p *parser) Name() string {
+	return p.tag.Name
+}
+
+func (p *parser) Tag() reflect.StructField {
+	return p.tag
+}
+
+func (p *parser) Owner() Value {
+	return p.parent
 }
 
 func (p *parser) Parse() error {
@@ -160,23 +158,10 @@ func (p *parser) Parse() error {
 			debugLogger.Printf("skipping error due not required field. field=%s err=%s", v.fullname(), err)
 		}
 	}
-
 	for _, v := range p.children {
 		if err := v.Parse(); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (p *parser) Name() string {
-	return p.tag.Name
-}
-
-func (p *parser) Tag() reflect.StructField {
-	return p.tag
-}
-
-func (p *parser) Owner() Value {
-	return p.parent
 }
