@@ -1,12 +1,14 @@
 package envconf
 
 import (
+	"errors"
 	"reflect"
 )
 
 var ErrUnsupportedType = errUnsupportedType
 
 type structType struct {
+	parser *EnvConf
 	parent *structType
 
 	v   reflect.Value
@@ -14,6 +16,24 @@ type structType struct {
 	tag reflect.StructField
 
 	fields []field
+}
+
+func newParentStructType(v reflect.Value, parser *EnvConf) (*structType, error) {
+	for v.Kind() == reflect.Ptr {
+		// check on nil
+		if v.IsNil() {
+			return nil, ErrNilData
+		}
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return nil, errors.New("invalid type")
+	}
+
+	s := newStructType(v, nil, reflect.StructField{})
+	s.parser = parser
+	return s, nil
 }
 
 func newStructType(val reflect.Value, parent *structType, tag reflect.StructField) *structType {

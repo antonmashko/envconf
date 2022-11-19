@@ -55,8 +55,8 @@ func (t *primitiveType) Define() error {
 			source = t.flag
 		case EnvPriority:
 			source = t.env
-		// case ExternalPriority:
-		// 	panic("not supported")
+		case ExternalPriority:
+			
 		case DefaultPriority:
 			source = t.def
 		}

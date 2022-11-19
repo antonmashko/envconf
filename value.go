@@ -218,6 +218,10 @@ func (v *value) define() error {
 	return nil
 }
 
+func (v *value) String() string {
+	return v.Name()
+}
+
 func setFromString(field reflect.Value, value string) error {
 	switch field.Kind() {
 	case reflect.Bool:
@@ -261,8 +265,4 @@ func setFromString(field reflect.Value, value string) error {
 		return errUnsupportedType
 	}
 	return nil
-}
-
-func (v *value) String() string {
-	return v.Name()
 }

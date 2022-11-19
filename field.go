@@ -19,12 +19,12 @@ func (emptyField) Define() error {
 	return nil
 }
 
-func createFieldFromValue(val reflect.Value, parent *structType, tag reflect.StructField) field {
-	switch val.Kind() {
+func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField) field {
+	switch v.Kind() {
 	case reflect.Struct:
-		return newStructType(val, parent, tag)
+		return newStructType(v, p, t)
 	case reflect.Ptr:
-		return newPtrType(val, parent, tag)
+		return newPtrType(v, p, t)
 	case reflect.Interface:
 		// in development
 		return &interfaceType{}
@@ -35,6 +35,6 @@ func createFieldFromValue(val reflect.Value, parent *structType, tag reflect.Str
 		// unsupported types
 		return emptyField{}
 	default:
-		return newPrimitiveType(val, parent, tag)
+		return newPrimitiveType(v, p, t)
 	}
 }

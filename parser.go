@@ -29,6 +29,8 @@ func SetLogger(logger Logger) {
 	}
 }
 
+type EnvConf struct{}
+
 // Parse define variables inside data from different sources,
 // such as flag/environment variable or default value
 func Parse(data interface{}) error {

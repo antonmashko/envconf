@@ -51,7 +51,7 @@ func TestNilValueOK(t *testing.T) {
 		t.Errorf("failed to parse. err=%s", err)
 	}
 	if tc.X != nil {
-		t.Errorf("incorrect value was set. %#v", *tc.X)
+		t.Errorf("incorrect value was set. %#v", tc.X)
 	}
 }
 
