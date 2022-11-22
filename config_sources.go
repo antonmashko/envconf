@@ -8,6 +8,29 @@ import (
 	"strings"
 )
 
+type ConfigSource int
+
+const (
+	FlagVariable ConfigSource = iota
+	EnvVariable
+	ExternalSource
+	DefaultValue
+)
+
+func (s ConfigSource) String() string {
+	switch s {
+	case FlagVariable:
+		return "Flag"
+	case EnvVariable:
+		return "Environment"
+	case ExternalSource:
+		return "External"
+	case DefaultValue:
+		return "Default"
+	}
+	return ""
+}
+
 const (
 	tagFlag        = "flag"
 	tagEnv         = "env"
@@ -26,7 +49,7 @@ var (
 	//errors
 	errInvalidFiled              = errors.New("invalid field")
 	errFiledIsNotSettable        = errors.New("field is not settable")
-	errUnsupportedType           = errors.New("unsupported type")
+	ErrUnsupportedType           = errors.New("unsupported type")
 	errConfigurationNotSpecified = errors.New("configuration not specified")
 )
 

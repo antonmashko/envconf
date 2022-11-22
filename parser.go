@@ -28,6 +28,7 @@ func SetLogger(logger Logger) {
 type EnvConf struct {
 	Logger   Logger
 	external External
+	priority []ConfigSource
 	help     *help
 }
 
@@ -47,6 +48,9 @@ func NewWithExternal(e External) *EnvConf {
 		external: e,
 		help:     h,
 		Logger:   debugLogger,
+		priority: []ConfigSource{
+			FlagVariable, EnvVariable, ExternalSource, DefaultValue,
+		},
 	}
 }
 
@@ -72,9 +76,11 @@ func (e *EnvConf) fieldDefined(f field) {
 
 func (e *EnvConf) fieldNotDefined(f field, err error) {
 	e.Logger.Printf("skipping error due not required field. field=%s err=%s",
-		fullname(f.(Value)), err)
+		fullname(f), err)
 }
 
+// Parse define variables inside data from different sources,
+// such as flag/environment variable or default value
 func (e *EnvConf) Parse(data interface{}) error {
 	if data == nil {
 		return ErrNilData
@@ -83,7 +89,7 @@ func (e *EnvConf) Parse(data interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err = p.Init(); err != nil {
+	if err = p.init(); err != nil {
 		return err
 	}
 	if e.help != nil {
@@ -98,7 +104,34 @@ func (e *EnvConf) Parse(data interface{}) error {
 	if err = e.external.Unmarshal(data); err != nil {
 		return err
 	}
-	return p.Define()
+	return p.define()
+}
+
+// SetPriorityOrder overrides default priority order.
+// Default priority order is: Flag, Environment variable, External source, Default value.
+func (e *EnvConf) SetPriorityOrder(s ...ConfigSource) {
+	if len(s) == 0 {
+		return
+	}
+	po := make(map[ConfigSource]int)
+	var idx int
+	for _, p := range s {
+		if _, ok := po[p]; ok {
+			po[p] = idx
+			idx++
+		}
+	}
+
+	result := make([]ConfigSource, len(po))
+	for s, idx := range po {
+		result[idx] = s
+	}
+	e.priority = result
+}
+
+// PriorityOrder return parsing priority order
+func (e *EnvConf) PriorityOrder() []ConfigSource {
+	return e.priority
 }
 
 // Parse define variables inside data from different sources,
@@ -111,19 +144,4 @@ func Parse(data interface{}) error {
 // (config files, key-value storages, etc.).
 func ParseWithExternal(data interface{}, external External) error {
 	return NewWithExternal(external).Parse(data)
-}
-
-func fullname(v Value) string {
-	name := v.Name()
-	for {
-		v = v.Owner()
-		if v == nil {
-			break
-		}
-		oname := v.Name()
-		if oname != "" {
-			name = oname + "." + name
-		}
-	}
-	return name
 }

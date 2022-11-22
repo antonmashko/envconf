@@ -27,7 +27,7 @@ func (h *help) print() {
 func (h *help) printValue(f *primitiveType) {
 	// TODO: help should be configurable
 	defaultValue, _ := f.def.Value()
-	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", fullname(f), f.tag.Type.Name(), defaultValue)
+	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", fullname(f), f.sf.Type.Name(), defaultValue)
 	fmt.Fprintf(os.Stdout, "\tflag: %s\n", f.flag.Name())
 	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", f.env.Name())
 	fmt.Fprintf(os.Stdout, "\trequired: %t\n", f.required)

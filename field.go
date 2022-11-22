@@ -5,8 +5,11 @@ import (
 )
 
 type field interface {
-	Init() error
-	Define() error
+	name() string
+	parent() field
+	init() error
+	define() error
+	isSet() bool
 }
 
 type requiredField interface {
@@ -15,12 +18,24 @@ type requiredField interface {
 
 type emptyField struct{}
 
-func (emptyField) Init() error {
+func (emptyField) init() error {
 	return nil
 }
 
-func (emptyField) Define() error {
+func (emptyField) define() error {
 	return nil
+}
+
+func (emptyField) isSet() bool {
+	return false
+}
+
+func (emptyField) parent() field {
+	return nil
+}
+
+func (emptyField) name() string {
+	return ""
 }
 
 func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField) field {
@@ -30,15 +45,29 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 	case reflect.Ptr:
 		return newPtrType(v, p, t)
 	case reflect.Interface:
-		// in development
-		return &interfaceType{}
+		return emptyField{}
 	case reflect.Map, reflect.Slice, reflect.Array:
-		// in development
-		return &collectionType{}
+		return emptyField{}
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types
 		return emptyField{}
 	default:
 		return newPrimitiveType(v, p, t)
 	}
+}
+
+func fullname(f field) string {
+	const delim = "."
+	name := f.name()
+	for {
+		f = f.parent()
+		if f == nil {
+			break
+		}
+		oname := f.name()
+		if oname != "" {
+			name = oname + delim + name
+		}
+	}
+	return name
 }

@@ -1,85 +1,43 @@
-package envconf
+package envconf_test
 
-// func TestParseEmptyStructOK(t *testing.T) {
-// 	if err := Parse(&struct{}{}); err != nil {
-// 		t.Errorf("failed to parse empty struct. err=%#v", err)
-// 	}
-// }
+import (
+	"testing"
 
-// func TestNilDataNegative(t *testing.T) {
-// 	if err := Parse(nil); err == nil || err != ErrNilData {
-// 		t.Errorf("err doesn't equals to ErrNilData. err=%#v", err)
-// 	}
-// }
+	"github.com/antonmashko/envconf"
+)
 
-// func TestDoublePointerOK(t *testing.T) {
-// 	tc := &struct {
-// 		X string `default:"ok"`
-// 	}{}
-// 	if err := Parse(&tc); err != nil {
-// 		t.Errorf("failed to parse. err=%s", err)
-// 	}
-// 	if tc.X != "ok" {
-// 		t.Errorf("incorrect value was set. %#v", tc.X)
-// 	}
-// }
+func TestParse_EmptyStruct_OK(t *testing.T) {
+	if err := envconf.Parse(&struct{}{}); err != nil {
+		t.Errorf("failed to parse empty struct. err=%#v", err)
+	}
+}
 
-// func TestParsingDurtaionOK(t *testing.T) {
-// 	tc := struct {
-// 		X time.Duration `default:"5m"`
-// 	}{}
-// 	if err := Parse(&tc); err != nil {
-// 		t.Errorf("failed to parse. err=%s", err)
-// 	}
-// 	if tc.X.Minutes() != 5.0 {
-// 		t.Errorf("incorrect value was set. %#v", tc.X)
-// 	}
-// }
+func TestParse_NilData_NilDataErr(t *testing.T) {
+	if err := envconf.Parse(nil); err == nil || err != envconf.ErrNilData {
+		t.Errorf("err doesn't equals to ErrNilData. err=%#v", err)
+	}
+}
 
-// func TestNilValueOK(t *testing.T) {
-// 	tc := struct {
-// 		X *string `default:"ok"`
-// 	}{}
-// 	if err := Parse(&tc); err != nil {
-// 		t.Errorf("failed to parse. err=%s", err)
-// 	}
-// 	if *tc.X != "ok" {
-// 		t.Errorf("incorrect value was set. %#v", tc.X)
-// 	}
-// }
+func TestParse_PassDataByValue_Err(t *testing.T) {
+	data := struct {
+		Field string `default:"123"`
+	}{}
+	if err := envconf.Parse(data); err == nil {
+		t.Fatal("expected error but got nil")
+	}
+}
 
-// func TestFlagParsedCallbackOK(t *testing.T) {
-// 	x := 0
-// 	FlagParsed = func() error {
-// 		x = 1
-// 		return nil
-// 	}
-// 	tc := struct{}{}
-// 	if err := Parse(&tc); err != nil {
-// 		t.Errorf("failed to parse. err=%s", err)
-// 	}
-// 	if x != 1 {
-// 		t.Errorf("incorrect value was set. %#v", x)
-// 	}
-// }
-
-// type foo struct {
-// 	Bar bar
-// }
-
-// type bar struct {
-// 	Data string `env:"data-env"`
-// }
-
-// func TestHotReload(t *testing.T) {
-// 	ts := &foo{}
-// 	f := func(b *bar) {
-// 		t.Logf("%p %s", b, b.Data)
-// 	}
-// 	os.Setenv("data-env", "1")
-// 	Parse(&ts)
-// 	f(&ts.Bar)
-// 	os.Setenv("data-env", "2")
-// 	Parse(&ts)
-// 	f(&ts.Bar)
-// }
+func TestParse_FlagParsedCallback_OK(t *testing.T) {
+	x := 0
+	envconf.FlagParsed = func() error {
+		x = 1
+		return nil
+	}
+	tc := struct{}{}
+	if err := envconf.Parse(&tc); err != nil {
+		t.Errorf("failed to parse. err=%s", err)
+	}
+	if x != 1 {
+		t.Errorf("incorrect value was set. %#v", x)
+	}
+}

@@ -5,17 +5,16 @@ import (
 	"reflect"
 )
 
-var ErrUnsupportedType = errUnsupportedType
-
 type structType struct {
 	parser *EnvConf
-	parent *structType
+	p      *structType
 
 	v   reflect.Value
 	t   reflect.Type
 	tag reflect.StructField
 
-	fields []field
+	hasValue bool
+	fields   []field
 }
 
 func newParentStructType(data interface{}, parser *EnvConf) (*structType, error) {
@@ -43,8 +42,8 @@ func newStructType(val reflect.Value, parent *structType, tag reflect.StructFiel
 		p = parent.parser
 	}
 	return &structType{
-		parent: parent,
 		parser: p,
+		p:      parent,
 		v:      val,
 		t:      val.Type(),
 		tag:    tag,
@@ -52,12 +51,23 @@ func newStructType(val reflect.Value, parent *structType, tag reflect.StructFiel
 	}
 }
 
-func (s *structType) Init() error {
+func (s *structType) name() string {
+	return s.tag.Name
+}
+
+func (s *structType) parent() field {
+	if s.p == nil {
+		return nil
+	}
+	return s.p
+}
+
+func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
 		rfield := s.v.Field(i)
 		f := createFieldFromValue(rfield, s, s.t.Field(i))
-		if err := f.Init(); err != nil {
+		if err := f.init(); err != nil {
 			return err
 		}
 		s.parser.fieldInitialized(f)
@@ -66,15 +76,15 @@ func (s *structType) Init() error {
 	return nil
 }
 
-func (s *structType) Define() error {
+func (s *structType) define() error {
 	for _, f := range s.fields {
-		err := f.Define()
+		err := f.define()
 		if err != nil {
 			if rf, ok := f.(requiredField); ok && rf.IsRequired() {
 				return &Error{
 					Message:   "failed to define field",
 					Inner:     err,
-					FieldName: fullname(f.(Value)),
+					FieldName: fullname(f),
 				}
 			}
 
@@ -84,20 +94,24 @@ func (s *structType) Define() error {
 			}
 			return err
 		}
-		s.parser.fieldDefined(f)
+		if f.isSet() {
+			s.hasValue = true
+			s.parser.fieldDefined(f)
+		}
 	}
 	return nil
 }
 
+func (s *structType) isSet() bool {
+	return s.hasValue
+}
+
 func (s *structType) Owner() Value {
-	if s.parent == nil {
-		return nil
-	}
-	return s.parent
+	return s.p
 }
 
 func (s *structType) Name() string {
-	return s.tag.Name
+	return s.name()
 }
 
 func (s *structType) Tag() reflect.StructField {

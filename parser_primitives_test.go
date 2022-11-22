@@ -9,7 +9,7 @@ import (
 	"github.com/antonmashko/envconf"
 )
 
-func TestParseFlatStructWithAllPrimitivesFromDefault_Ok(t *testing.T) {
+func TestPrimitive_ParseFlatStructWithAllPrimitivesFromDefault_Ok(t *testing.T) {
 	data := struct {
 		Field1  bool    `default:"true"`
 		Field2  int     `default:"1"`
@@ -87,7 +87,7 @@ func TestParseFlatStructWithAllPrimitivesFromEnv_Ok(t *testing.T) {
 	}
 }
 
-func TestParseFlatStructWithAllPrimitivesFromFlag_Ok(t *testing.T) {
+func TestPrimitive_ParseFlatStructWithAllPrimitivesFromFlag_Ok(t *testing.T) {
 	os.Args = append(os.Args, "-test-field-1=true")
 	for i := 2; i <= 14; i++ {
 		os.Args = append(os.Args, fmt.Sprintf("-test-field-%d=%d", i, i-1))
@@ -127,7 +127,7 @@ func TestParseFlatStructWithAllPrimitivesFromFlag_Ok(t *testing.T) {
 	}
 }
 
-func TestParseBoolFromDefault_InvalidValue_Err(t *testing.T) {
+func TestPrimitive_ParseBoolFromDefault_InvalidValueErr(t *testing.T) {
 	data := struct {
 		Field1 bool `default:"test"`
 	}{}
@@ -136,7 +136,7 @@ func TestParseBoolFromDefault_InvalidValue_Err(t *testing.T) {
 	}
 }
 
-func TestParseDurationFromEnv_Ok(t *testing.T) {
+func TestPrimitive_ParseDurationFromEnv_Ok(t *testing.T) {
 	data := struct {
 		Dur time.Duration `env:"TEST_DUR"`
 	}{}
@@ -149,7 +149,7 @@ func TestParseDurationFromEnv_Ok(t *testing.T) {
 	}
 }
 
-func TestParseDurationFromEnv_InvalidValue_Err(t *testing.T) {
+func TestPrimitive_ParseDurationFromEnv_InvalidValueErr(t *testing.T) {
 	data := struct {
 		Dur time.Duration `env:"TEST_DUR"`
 	}{}
@@ -159,7 +159,7 @@ func TestParseDurationFromEnv_InvalidValue_Err(t *testing.T) {
 	}
 }
 
-func TestParseInt64FromDefault_InvalidValue_Err(t *testing.T) {
+func TestPrimitive_ParseInt64FromDefault_InvalidValueErr(t *testing.T) {
 	data := struct {
 		Field1 int64 `default:"test"`
 	}{}
@@ -168,7 +168,7 @@ func TestParseInt64FromDefault_InvalidValue_Err(t *testing.T) {
 	}
 }
 
-func TestParseUint64FromDefault_InvalidValue_Err(t *testing.T) {
+func TestPrimitive_ParseUint64FromDefault_InvalidValueErr(t *testing.T) {
 	data := struct {
 		Field1 uint64 `default:"test"`
 	}{}
@@ -177,11 +177,44 @@ func TestParseUint64FromDefault_InvalidValue_Err(t *testing.T) {
 	}
 }
 
-func TestParseFloat64FromDefault_InvalidValue_Err(t *testing.T) {
+func TestPrimitive_ParseFloat64FromDefault_InvalidValueErr(t *testing.T) {
 	data := struct {
 		Field1 float64 `default:"test"`
 	}{}
 	if err := envconf.Parse(&data); err == nil {
 		t.Fatal("expected error but got nil")
+	}
+}
+
+func TestPrimitive_RequiredValue_Ok(t *testing.T) {
+	expected := "test123"
+	os.Setenv("TEST_FIELD1", expected)
+	data := struct {
+		Field1 string `env:"TEST_FIELD1" required:"true"`
+	}{}
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal("Parse: ", err)
+	}
+	if data.Field1 != expected {
+		t.Fatalf("incorrect value. expected=%s actual=%s", expected, data.Field1)
+	}
+}
+
+func TestPrimitive_RequiredValue_Err(t *testing.T) {
+	os.Clearenv()
+	data := struct {
+		Field1 string `env:"TEST_FIELD1" required:"true"`
+	}{}
+	err := envconf.Parse(&data)
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	e, ok := err.(*envconf.Error)
+	if !ok {
+		t.Fatalf("invalid error type. expected=*envconf.Error actual=%#v", err)
+	}
+	const expectedFieldName = "Field1"
+	if e.FieldName != "Field1" {
+		t.Fatalf("incorrect field name in error. expected=%s actual=%s", expectedFieldName, e.FieldName)
 	}
 }

@@ -8,14 +8,15 @@ import (
 )
 
 type definedValue struct {
-	source Priority
+	source ConfigSource
 	value  interface{}
 }
 
 type primitiveType struct {
-	parent   *structType
-	v        reflect.Value
-	tag      reflect.StructField
+	v  reflect.Value
+	p  *structType
+	sf reflect.StructField
+
 	flag     Var    // flag value
 	env      Var    // env value
 	def      Var    // default value
@@ -25,26 +26,34 @@ type primitiveType struct {
 	definedValue *definedValue
 }
 
-func newPrimitiveType(val reflect.Value, parent *structType, tag reflect.StructField) *primitiveType {
-	desc := tag.Tag.Get(tagDescription)
-	required, _ := strconv.ParseBool(tag.Tag.Get(tagRequired))
+func newPrimitiveType(v reflect.Value, p *structType, sf reflect.StructField) *primitiveType {
+	desc := sf.Tag.Get(tagDescription)
+	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
 	return &primitiveType{
-		parent:   parent,
-		v:        val,
-		tag:      tag,
-		flag:     newFlagSource(tag, desc),
-		env:      newEnvSource(tag),
-		def:      newDefaultValueSource(tag),
+		p:        p,
+		v:        v,
+		sf:       sf,
+		flag:     newFlagSource(sf, desc),
+		env:      newEnvSource(sf),
+		def:      newDefaultValueSource(sf),
 		required: required,
 		desc:     desc,
 	}
 }
 
-func (t *primitiveType) Init() error {
+func (t *primitiveType) name() string {
+	return t.sf.Name
+}
+
+func (t *primitiveType) parent() field {
+	return t.p
+}
+
+func (t *primitiveType) init() error {
 	return nil
 }
 
-func (t *primitiveType) Define() error {
+func (t *primitiveType) define() error {
 	// validate reflect value
 	if !t.v.IsValid() {
 		return errInvalidFiled
@@ -54,28 +63,28 @@ func (t *primitiveType) Define() error {
 	}
 
 	// create correct parse priority
-	priority := priorityOrder()
+	priority := t.p.parser.PriorityOrder()
 	for _, p := range priority {
 		var v Var
 		switch p {
-		case FlagPriority:
+		case FlagVariable:
 			v = t.flag
-		case EnvPriority:
+		case EnvVariable:
 			v = t.env
-		case ExternalPriority:
+		case ExternalSource:
 			values := []Value{t}
-			var parent Value = t.parent
+			var parent Value = t.p
 			for parent != nil && parent.Name() != "" {
 				values = append([]Value{parent}, values...)
 				parent = parent.Owner()
 			}
-			value, exists := t.parent.parser.external.Get(values...)
+			value, exists := t.p.parser.external.Get(values...)
 			if exists {
 				t.v.Set(reflect.ValueOf(value))
 				return nil
 			}
 			continue
-		case DefaultPriority:
+		case DefaultValue:
 			v = t.def
 		}
 
@@ -93,15 +102,19 @@ func (t *primitiveType) Define() error {
 }
 
 func (t *primitiveType) Owner() Value {
-	return t.parent
+	return t.p
 }
 
 func (t *primitiveType) Name() string {
-	return t.tag.Name
+	return t.name()
 }
 
 func (t *primitiveType) Tag() reflect.StructField {
-	return t.tag
+	return t.sf
+}
+
+func (t *primitiveType) isSet() bool {
+	return t.definedValue != nil
 }
 
 func (t *primitiveType) IsRequired() bool {
@@ -148,7 +161,7 @@ func setFromString(field reflect.Value, value string) error {
 	case reflect.String:
 		field.SetString(value)
 	default:
-		return errUnsupportedType
+		return ErrUnsupportedType
 	}
 	return nil
 }

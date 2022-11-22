@@ -2,6 +2,7 @@ package envconf
 
 import "reflect"
 
+// DEPRECATED: on next changes this interface will be removed
 type Value interface {
 	Owner() Value
 	Name() string

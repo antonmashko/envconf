@@ -6,23 +6,25 @@ import (
 
 type ptrType struct {
 	field
-	parent *structType
-	v      reflect.Value
-	tmp    *reflect.Value
-	tag    reflect.StructField
+
+	p  *structType
+	v  reflect.Value
+	sf reflect.StructField
+
+	tmp *reflect.Value
 }
 
-func newPtrType(val reflect.Value, parent *structType, tag reflect.StructField) *ptrType {
+func newPtrType(v reflect.Value, p *structType, sf reflect.StructField) *ptrType {
 	return &ptrType{
-		field:  emptyField{},
-		parent: parent,
-		v:      val,
-		tag:    tag,
-		tmp:    nil,
+		field: emptyField{},
+		p:     p,
+		v:     v,
+		sf:    sf,
+		tmp:   nil,
 	}
 }
 
-func (f *ptrType) Init() error {
+func (f *ptrType) init() error {
 	tmp := f.v
 	for tmp.Kind() == reflect.Ptr {
 		if tmp.IsNil() {
@@ -38,20 +40,30 @@ func (f *ptrType) Init() error {
 		}
 	}
 
-	f.field = createFieldFromValue(tmp, f.parent, f.tag)
-	return f.field.Init()
+	f.field = createFieldFromValue(tmp, f.p, f.sf)
+	return f.field.init()
 }
 
-func (f *ptrType) Define() error {
-	err := f.field.Define()
+func (f *ptrType) define() error {
+	err := f.field.define()
 	if err != nil {
 		return err
 	}
 
-	if f.tmp != nil {
-		// FIXME: field should not be initialized if none of the fields has a value
+	if f.field.isSet() && f.tmp != nil {
 		f.v.Set(*f.tmp)
 	}
 
 	return nil
+}
+
+func (f *ptrType) name() string {
+	return f.sf.Name
+}
+
+func (f *ptrType) parent() field {
+	if f.p == nil {
+		return nil
+	}
+	return f.p
 }
