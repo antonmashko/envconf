@@ -116,12 +116,18 @@ func (e *EnvConf) SetPriorityOrder(s ...ConfigSource) {
 	po := make(map[ConfigSource]int)
 	var idx int
 	for _, p := range s {
-		if _, ok := po[p]; ok {
+		if p != FlagVariable && p != EnvVariable &&
+			p != ExternalSource && p != DefaultValue {
+			continue
+		}
+		if _, ok := po[p]; !ok {
 			po[p] = idx
 			idx++
 		}
 	}
-
+	if len(po) == 0 {
+		return
+	}
 	result := make([]ConfigSource, len(po))
 	for s, idx := range po {
 		result[idx] = s
