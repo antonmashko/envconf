@@ -3,9 +3,9 @@ package envconf
 import (
 	"errors"
 	"flag"
-	"io/ioutil"
-	"log"
 )
+
+var defaultEnvConf *EnvConf
 
 // ErrNilData mean that exists nil pointer inside data struct
 var ErrNilData = errors.New("nil data")
@@ -15,14 +15,8 @@ var ErrNilData = errors.New("nil data")
 // return not nil error interrupt pasring
 var FlagParsed func() error
 
-var debugLogger Logger = &logger{l: log.New(ioutil.Discard, "", log.Ltime)}
-
-// SetLogger define debug logger.
-// This logger will print setted values in data fields
-func SetLogger(logger Logger) {
-	if logger != nil {
-		debugLogger = logger
-	}
+func init() {
+	defaultEnvConf = New()
 }
 
 type EnvConf struct {
@@ -70,7 +64,7 @@ func (e *EnvConf) fieldDefined(f field) {
 	if !ok || pt.definedValue == nil {
 		return
 	}
-	debugLogger.Printf("envconf: set variable name=%s value=%v source=%s",
+	e.Logger.Printf("envconf: set variable name=%s value=%v source=%s",
 		fullname(pt), pt.definedValue.value, pt.definedValue.source)
 }
 
@@ -143,11 +137,26 @@ func (e *EnvConf) PriorityOrder() []ConfigSource {
 // Parse define variables inside data from different sources,
 // such as flag/environment variable or default value
 func Parse(data interface{}) error {
-	return New().Parse(data)
+	return defaultEnvConf.Parse(data)
 }
 
 // ParseWithExternal works same as Parse method but also can be used external sources
 // (config files, key-value storages, etc.).
 func ParseWithExternal(data interface{}, external External) error {
-	return NewWithExternal(external).Parse(data)
+	ecfg := NewWithExternal(external)
+	ecfg.Logger = defaultEnvConf.Logger
+	ecfg.SetPriorityOrder(defaultEnvConf.PriorityOrder()...)
+	return ecfg.Parse(data)
+}
+
+// SetLogger define debug logger.
+// This logger will print defined values in data fields
+func SetLogger(logger Logger) {
+	if logger != nil {
+		defaultEnvConf.Logger = logger
+	}
+}
+
+func SetPriority(s ...ConfigSource) {
+	defaultEnvConf.SetPriorityOrder(s...)
 }

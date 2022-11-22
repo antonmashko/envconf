@@ -41,3 +41,10 @@ func TestParse_FlagParsedCallback_OK(t *testing.T) {
 		t.Errorf("incorrect value was set. %#v", x)
 	}
 }
+
+func TestParse_InvalidData_Err(t *testing.T) {
+	var cfg string
+	if err := envconf.Parse(&cfg); err == nil {
+		t.Fail()
+	}
+}
