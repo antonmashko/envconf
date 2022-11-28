@@ -157,6 +157,8 @@ func SetLogger(logger Logger) {
 	}
 }
 
+// SetPriority overrides default priority order.
+// Default priority order is: Flag, Environment variable, External source, Default value.
 func SetPriority(s ...ConfigSource) {
 	defaultEnvConf.SetPriorityOrder(s...)
 }
