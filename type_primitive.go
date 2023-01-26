@@ -2,6 +2,7 @@ package envconf
 
 import (
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"time"
@@ -78,9 +79,8 @@ func (t *primitiveType) define() error {
 				values = append([]Value{parent}, values...)
 				parent = parent.Owner()
 			}
-			value, exists := t.p.parser.external.Get(values...)
-			if exists {
-				t.v.Set(reflect.ValueOf(value))
+			if _, ok := t.p.parser.external.Get(values...); ok {
+				// field defined in external source
 				return nil
 			}
 			continue
@@ -173,7 +173,12 @@ func setFromString(field reflect.Value, value string) error {
 	case reflect.String:
 		field.SetString(value)
 	default:
-		return ErrUnsupportedType
+		switch field.Interface().(type) {
+		case net.IP:
+			field.Set(reflect.ValueOf(net.ParseIP(value)))
+		default:
+			return ErrUnsupportedType
+		}
 	}
 	return nil
 }

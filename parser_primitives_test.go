@@ -2,6 +2,7 @@ package envconf_test
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -264,4 +265,22 @@ func TestPrimitive_ParseComplex_InvalidValueErr(t *testing.T) {
 			t.Fatal("expected error but got nil")
 		}
 	})
+}
+
+func TestPrimitive_ParseIPAddress_Ok(t *testing.T) {
+	data := struct {
+		FieldIPv4 net.IP `default:"192.0.2.1"`
+		FieldIPv6 net.IP `default:"2001:db8::68"`
+	}{}
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal(err)
+	}
+	expectedIPv4 := net.ParseIP("192.0.2.1")
+	if !expectedIPv4.Equal(data.FieldIPv4) {
+		t.Fatalf("incorrect value. expected=%v actual=%v", data.FieldIPv4, expectedIPv4)
+	}
+	expectedIPv6 := net.ParseIP("2001:db8::68")
+	if !expectedIPv6.Equal(data.FieldIPv6) {
+		t.Fatalf("incorrect value. expected=%v actual=%v", data.FieldIPv4, expectedIPv6)
+	}
 }
