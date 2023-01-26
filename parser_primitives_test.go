@@ -45,6 +45,25 @@ func TestPrimitive_ParseFlatStructWithAllPrimitivesFromDefault_Ok(t *testing.T) 
 	}
 }
 
+func TestPrimitive_ParseComplex_Ok(t *testing.T) {
+	data := struct {
+		Field1 complex64  `default:"64+64i"`
+		Field2 complex128 `default:"128+128i"`
+	}{}
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal(err)
+	}
+	expected1 := complex64(64 + 64i)
+	if data.Field1 != expected1 {
+		t.Fatalf("incorrect value. expected=%v actual=%v", data.Field1, expected1)
+	}
+
+	expected2 := complex128(128 + 128i)
+	if data.Field1 != expected1 {
+		t.Fatalf("incorrect value. expected=%v actual=%v", data.Field2, expected2)
+	}
+}
+
 func TestParseFlatStructWithAllPrimitivesFromEnv_Ok(t *testing.T) {
 	data := struct {
 		Field1  bool    `env:"TEST_FIELD_1"`
