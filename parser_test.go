@@ -18,6 +18,13 @@ func TestParse_NilData_NilDataErr(t *testing.T) {
 	}
 }
 
+func TestParse_NilValue_NilDataErr(t *testing.T) {
+	var d *struct{}
+	if err := envconf.Parse(d); err == nil || err != envconf.ErrNilData {
+		t.Errorf("err doesn't equals to ErrNilData. err=%#v", err)
+	}
+}
+
 func TestParse_PassDataByValue_Err(t *testing.T) {
 	data := struct {
 		Field string `default:"123"`
