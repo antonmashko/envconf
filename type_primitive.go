@@ -158,6 +158,18 @@ func setFromString(field reflect.Value, value string) error {
 			return err
 		}
 		field.SetFloat(i)
+	case reflect.Complex64:
+		i, err := strconv.ParseComplex(value, 64)
+		if err != nil {
+			return err
+		}
+		field.SetComplex(i)
+	case reflect.Complex128:
+		i, err := strconv.ParseComplex(value, 128)
+		if err != nil {
+			return err
+		}
+		field.SetComplex(i)
 	case reflect.String:
 		field.SetString(value)
 	default:
