@@ -79,8 +79,8 @@ func (t *primitiveType) define() error {
 				values = append([]Value{parent}, values...)
 				parent = parent.Owner()
 			}
-			_, exists := t.p.parser.external.Get(values...)
-			if exists {
+			_, ok := t.p.parser.external.Get(values...)
+			if ok {
 				// field defined in external source
 				return nil
 			}
