@@ -46,7 +46,7 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 		return newPtrType(v, p, t)
 	case reflect.Interface:
 		return emptyField{}
-	case reflect.Map, reflect.Slice, reflect.Array:
+	case reflect.Map, reflect.Array:
 		return emptyField{}
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types

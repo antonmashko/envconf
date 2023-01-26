@@ -2,6 +2,7 @@ package envconf
 
 import (
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"time"
@@ -78,9 +79,9 @@ func (t *primitiveType) define() error {
 				values = append([]Value{parent}, values...)
 				parent = parent.Owner()
 			}
-			value, exists := t.p.parser.external.Get(values...)
-			if exists {
-				t.v.Set(reflect.ValueOf(value))
+			_, ok := t.p.parser.external.Get(values...)
+			if ok {
+				// field defined in external source
 				return nil
 			}
 			continue
@@ -170,6 +171,11 @@ func setFromString(field reflect.Value, value string) error {
 			return err
 		}
 		field.SetComplex(i)
+	case reflect.Slice:
+		if _, ok := field.Interface().(net.IP); ok {
+			field.Set(reflect.ValueOf(net.ParseIP(value)))
+		}
+		// TODO: support slice type (https://github.com/antonmashko/envconf/issues/19)
 	case reflect.String:
 		field.SetString(value)
 	default:
