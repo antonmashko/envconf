@@ -170,15 +170,15 @@ func setFromString(field reflect.Value, value string) error {
 			return err
 		}
 		field.SetComplex(i)
+	case reflect.Slice:
+		if _, ok := field.Interface().(net.IP); ok {
+			field.Set(reflect.ValueOf(net.ParseIP(value)))
+		}
+		// TODO: support slice type (https://github.com/antonmashko/envconf/issues/19)
 	case reflect.String:
 		field.SetString(value)
 	default:
-		switch field.Interface().(type) {
-		case net.IP:
-			field.Set(reflect.ValueOf(net.ParseIP(value)))
-		default:
-			return ErrUnsupportedType
-		}
+		return ErrUnsupportedType
 	}
 	return nil
 }
