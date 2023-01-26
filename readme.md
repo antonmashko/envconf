@@ -4,64 +4,80 @@
 [![Build and Test](https://github.com/antonmashko/envconf/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/antonmashko/envconf/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/antonmashko/envconf/branch/master/graph/badge.svg?token=ZdkG2flKKv)](https://codecov.io/gh/antonmashko/envconf)    
 
-Installing
+EnvConf is a Go package, for parsing configuration values from different sources. 
+
+## Installing
 ```
 go get github.com/antonmashko/envconf
 ```
 
-## What is EnvConf?  
-EnvConf is a Go package, for parsing configuration values from different sources. 
+## Parse Configs
+Usually you need a tag with desire configuration sources and execution of a single function `envconf.Parse` for getting all configuration values into your golang structure.
 
-## How it works?
-- Import envconf package:
-``` golang
-import "github.com/antonmashko/envconf"
-```
+### Supported configuration sources
+* command line flags
+* environment variables
+* default values
+* external sources (can be anything that is implementing interface [External](https://pkg.go.dev/github.com/antonmashko/envconf#External))
 
-- Create golang struct with following tags (NOTE: each of fields can be omitted, here used all just for example)
-``` golang
+### Supported tags
+**Tags**: 
+- flag - name of flag;   
+- env - name of environment variable;
+- default - if nothing set this value will be used as field value; 
+- required - on `true` checks that configuration exists in `flag` or `env` source;  
+- description - field description in help output.
+
+
+### Example
+Let's take a look at a simple example. Here we're creating struct with 3 tags for different configuration sources: flag, env, and default value. **NOTE**: It's not necessary to specify tags for each configuration type, add desired only 
+
+```golang
+package main
+
+import (
+	"fmt"
+
+	"github.com/antonmashko/envconf"
+)
+
 type Example struct {
-    Field1 string `flag:"field" env:"EXAMPLE_FIELD" default:"example_value" required:"false" description:"this is exaple configurable field"`
+	Field1 string `flag:"flag-name" env:"ENV_VAR_NAME" default:"default-value"`
 }
-```
 
-- Parse outside values to `Exaple` struct
-``` golang
 func main() {
-    var e Example
-    envconf.Parse(&e)
-    println(e.Field1)
+	var cfg Example
+	if err := envconf.Parse(&cfg); err != nil {
+		panic(err)
+	}
+	fmt.Printf("%#v\n", cfg)
 }
 ```
 
-- Testings application with different passing params:
 
-a) flag 
-> ./example -field='flag example'   
-> flag example  
-
-b) environment variable 
-> EXAMPLE_FIELD='env variable example' ./example    
-> env variable example  
-
-c) default value    
-> ./example     
-> example_value 
-
-## How to get all registered fields?
-To print all values which can be parsed use flag `-help` or `-h`:
-> ./example -help   
+**Testing!**
+If you want to get set `Field1` from command line flag, use flag name that is set in `flag` tag. 
+```bash
+$ go run main.go -flag-name="variable-from-flag"
+main.Example{Field1:"variable-from-flag"}
 ```
+The same result would be for other configuration types.
+
+### `-help` output
+Using envconf will also generate help output with all registered fields and types. Use flag `-help` or `-h` for getting it. 
+```bash
+$ go run main.go -help
+
 Usage:
 
-Field1 <string> example_value
-        flag: field
-        environment variable: EXAMPLE_FIELD
+Field1 <string> default-value
+        flag: flag-name
+        environment variable: ENV_VAR_NAME
         required: false
-        description: "this is exaple configurable field"
+        description: ""
 ```
 
-## Tags description:
+## Configuration Priority
 **Priority**:   
 ```
 1) Flag 
@@ -69,10 +85,3 @@ Field1 <string> example_value
 3) External source
 4) Default value
 ```
-
-**Tags**: 
-- flag - name of flag for field [must be unique];   
-- env - name of environment variable for field [must be unique];
-- default - if nothing set this value will be used; 
-- required - on `true` validate value from `flag` or `env` source;  
-- description - description in `help`   

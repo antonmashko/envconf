@@ -1,5 +1,14 @@
 package envconf
 
+import "reflect"
+
+// DEPRECATED: on next changes this interface will be removed
+type Value interface {
+	Owner() Value
+	Name() string
+	Tag() reflect.StructField
+}
+
 // External config source
 type External interface {
 	// Get string value from values chain(from parent to child)

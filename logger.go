@@ -1,8 +1,11 @@
 package envconf
 
 import (
+	"io/ioutil"
 	"log"
 )
+
+var debugLogger Logger = &logger{l: log.New(ioutil.Discard, "", log.Ltime)}
 
 type Logger interface {
 	Printf(string, ...interface{})
