@@ -45,22 +45,12 @@ func TestPrimitive_ParseFlatStructWithAllPrimitivesFromDefault_Ok(t *testing.T) 
 	}
 }
 
-func TestPrimitive_ParseComplex_Ok(t *testing.T) {
-	data := struct {
-		Field1 complex64  `default:"64+64i"`
-		Field2 complex128 `default:"128+128i"`
+func TestPrimitive_ParseComplex64_InvalidValueErr(t *testing.T) {
+	data1 := struct {
+		Field1 complex64 `default:"value1"`
 	}{}
-	if err := envconf.Parse(&data); err != nil {
-		t.Fatal(err)
-	}
-	expected1 := complex64(64 + 64i)
-	if data.Field1 != expected1 {
-		t.Fatalf("incorrect value. expected=%v actual=%v", data.Field1, expected1)
-	}
-
-	expected2 := complex128(128 + 128i)
-	if data.Field1 != expected1 {
-		t.Fatalf("incorrect value. expected=%v actual=%v", data.Field2, expected2)
+	if err := envconf.Parse(&data1); err == nil {
+		t.Fatal("expected error but got nil")
 	}
 }
 
@@ -236,4 +226,42 @@ func TestPrimitive_RequiredValue_Err(t *testing.T) {
 	if e.FieldName != "Field1" {
 		t.Fatalf("incorrect field name in error. expected=%s actual=%s", expectedFieldName, e.FieldName)
 	}
+}
+
+func TestPrimitive_ParseComplex_Ok(t *testing.T) {
+	data := struct {
+		Field1 complex64  `default:"64+64i"`
+		Field2 complex128 `default:"128+128i"`
+	}{}
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal(err)
+	}
+	expected1 := complex64(64 + 64i)
+	if data.Field1 != expected1 {
+		t.Fatalf("incorrect value. expected=%v actual=%v", data.Field1, expected1)
+	}
+
+	expected2 := complex128(128 + 128i)
+	if data.Field1 != expected1 {
+		t.Fatalf("incorrect value. expected=%v actual=%v", data.Field2, expected2)
+	}
+}
+
+func TestPrimitive_ParseComplex_InvalidValueErr(t *testing.T) {
+	t.Run("Complex64", func(t *testing.T) {
+		data1 := struct {
+			Field1 complex64 `default:"value1"`
+		}{}
+		if err := envconf.Parse(&data1); err == nil {
+			t.Fatal("expected error but got nil")
+		}
+	})
+	t.Run("Complex128", func(t *testing.T) {
+		data1 := struct {
+			Field1 complex128 `default:"value1"`
+		}{}
+		if err := envconf.Parse(&data1); err == nil {
+			t.Fatal("expected error but got nil")
+		}
+	})
 }
