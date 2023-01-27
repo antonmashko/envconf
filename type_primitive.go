@@ -3,6 +3,7 @@ package envconf
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"reflect"
 	"strconv"
 	"time"
@@ -179,7 +180,16 @@ func setFromString(field reflect.Value, value string) error {
 	case reflect.String:
 		field.SetString(value)
 	default:
-		return ErrUnsupportedType
+		switch field.Interface().(type) {
+		case url.URL:
+			url, err := url.Parse(value)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(*url))
+		default:
+			return ErrUnsupportedType
+		}
 	}
 	return nil
 }

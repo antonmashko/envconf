@@ -3,6 +3,7 @@ package envconf_test
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -282,5 +283,32 @@ func TestPrimitive_ParseIPAddress_Ok(t *testing.T) {
 	expectedIPv6 := net.ParseIP("2001:db8::68")
 	if !expectedIPv6.Equal(data.FieldIPv6) {
 		t.Fatalf("incorrect value. expected=%v actual=%v", data.FieldIPv4, expectedIPv6)
+	}
+}
+
+func TestPrimitive_ParseURL_Ok(t *testing.T) {
+	data := struct {
+		URL1 *url.URL `default:"http://test.com/"`
+		URL2 url.URL  `default:"http://test.com/"`
+	}{}
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal(err)
+	}
+	expectedURL, err := url.Parse("http://test.com/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expectedURL.String() != data.URL1.String() || expectedURL.String() != (&data.URL2).String() {
+		t.Fatalf("incorrect value. expected=%v actual1=%v actual2=%v",
+			expectedURL.String(), data.URL1.String(), data.URL2.String())
+	}
+}
+
+func TestPrimitive_ParseURL_ErrInvalidURL(t *testing.T) {
+	data := struct {
+		URL1 *url.URL `default:";test:test"`
+	}{}
+	if err := envconf.Parse(&data); err == nil {
+		t.Fatal("expected error but got nil")
 	}
 }

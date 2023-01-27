@@ -1,6 +1,7 @@
 package envconf
 
 import (
+	"net/url"
 	"reflect"
 )
 
@@ -41,7 +42,12 @@ func (emptyField) name() string {
 func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField) field {
 	switch v.Kind() {
 	case reflect.Struct:
-		return newStructType(v, p, t)
+		switch v.Interface().(type) {
+		case url.URL:
+			return newPrimitiveType(v, p, t)
+		default:
+			return newStructType(v, p, t)
+		}
 	case reflect.Ptr:
 		return newPtrType(v, p, t)
 	case reflect.Interface:
