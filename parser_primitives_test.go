@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/antonmashko/envconf"
 )
@@ -310,5 +311,21 @@ func TestPrimitive_ParseURL_ErrInvalidURL(t *testing.T) {
 	}{}
 	if err := envconf.Parse(&data); err == nil {
 		t.Fatal("expected error but got nil")
+	}
+}
+
+func TestParse_UnsupportedFieldWithoutPanic_Ok(t *testing.T) {
+	cfg := struct {
+		Field1 [10]int
+		Field2 map[string]interface{}
+		Field3 chan struct{}
+		Field4 func()
+		Field5 unsafe.Pointer
+		Field6 uintptr
+		Field7 interface{}
+	}{}
+
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
 	}
 }

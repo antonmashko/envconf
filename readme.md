@@ -77,6 +77,31 @@ Field1 <string> default-value
         description: ""
 ```
 
+## Auto-generating Config Names
+EnvConf can generate environment variable name or flag name from golang field path. All you need is to set `*` in specific tag. For environment variables name envconf will use field path in uppercase and underscore as a delimiter. 
+Example: 
+```golang
+type Config struct {
+	HTTP struct {
+		Addr string `env:"*"`
+	}
+}
+```
+Now we can use `HTTP_ADDR` environment variable for defining Addr field. 
+The same approach will work for flag. But flag names will be generated in lowercase and the dash will be as a delimiter.
+
+### Overriding Parent struct name for Auto-generation
+In case if parent struct name doesn't satisfy for configuration variable name, it can be changed with `envconf` tag.
+Example:
+```golang
+type Config struct {
+	HTTP struct {
+		Addr string `env:"*"`
+	} `envconf:"httpserver"`
+}
+```
+Now we'll get `HTTPSERVER_ADDR` as environment variable name.
+
 ## Configuration Priority
 **Priority**:   
 ```
