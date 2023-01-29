@@ -103,7 +103,7 @@ type Config struct {
 Now we'll get `HTTPSERVER_ADDR` as environment variable name.
 
 ## Configuration Priority
-**Priority**:   
+**Priority**:
 ```
 1) Flag 
 2) Environment variable 
