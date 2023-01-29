@@ -98,7 +98,6 @@ func (t *primitiveType) define() error {
 				source: p,
 				value:  v,
 			}
-			// set value
 			return setFromString(t.v, str)
 		}
 	}
