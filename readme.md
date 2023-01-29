@@ -27,6 +27,7 @@ Usually you need a tag with desire configuration sources and execution of a sing
 - default - if nothing set this value will be used as field value; 
 - required - on `true` checks that configuration exists in `flag` or `env` source;  
 - description - field description in help output.
+- envconf - only for structs. override struct name for generating configuration name. 
 
 
 ### Example
