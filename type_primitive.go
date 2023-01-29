@@ -152,6 +152,7 @@ func setFromString(field reflect.Value, value string) error {
 			return err
 		}
 		field.Set(reflect.ValueOf(dt))
+		return nil
 	}
 
 	// primitives and collections
@@ -175,12 +176,18 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.SetUint(i)
 	case reflect.Float32, reflect.Float64:
-		i, err := strconv.ParseFloat(value, field.Type().Bits())
+		i, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return err
 		}
 		field.SetFloat(i)
-	case reflect.Complex64, reflect.Complex128:
+	case reflect.Complex64:
+		i, err := strconv.ParseComplex(value, 64)
+		if err != nil {
+			return err
+		}
+		field.SetComplex(i)
+	case reflect.Complex128:
 		i, err := strconv.ParseComplex(value, field.Type().Bits())
 		if err != nil {
 			return err
