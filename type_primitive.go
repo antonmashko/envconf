@@ -31,16 +31,17 @@ type primitiveType struct {
 func newPrimitiveType(v reflect.Value, p *structType, sf reflect.StructField) *primitiveType {
 	desc := sf.Tag.Get(tagDescription)
 	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
-	return &primitiveType{
+	f := &primitiveType{
 		p:        p,
 		v:        v,
 		sf:       sf,
-		flag:     newFlagSource(sf, desc),
-		env:      newEnvSource(sf),
 		def:      newDefaultValueSource(sf),
 		required: required,
 		desc:     desc,
 	}
+	f.flag = newFlagSource(f, sf, desc)
+	f.env = newEnvSource(f, sf)
+	return f
 }
 
 func (t *primitiveType) name() string {
@@ -124,6 +125,28 @@ func (t *primitiveType) IsRequired() bool {
 }
 
 func setFromString(field reflect.Value, value string) error {
+	// native complex types
+	switch field.Interface().(type) {
+	case url.URL:
+		url, err := url.Parse(value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(*url))
+		return nil
+	case time.Duration:
+		d, err := time.ParseDuration(value)
+		if err != nil {
+			return err
+		}
+		field.SetInt(d.Nanoseconds())
+		return nil
+	case net.IP:
+		field.Set(reflect.ValueOf(net.ParseIP(value)))
+		return nil
+	}
+
+	// primitives and collections
 	switch field.Kind() {
 	case reflect.Bool:
 		i, err := strconv.ParseBool(value)
@@ -132,20 +155,9 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.SetBool(i)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		var i int64
-		var err error
-		if _, ok := field.Interface().(time.Duration); ok {
-			var d time.Duration
-			d, err = time.ParseDuration(value)
-			if err != nil {
-				return err
-			}
-			i = d.Nanoseconds()
-		} else {
-			i, err = strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				return err
-			}
+		i, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
 		}
 		field.SetInt(i)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -173,23 +185,11 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.SetComplex(i)
 	case reflect.Slice:
-		if _, ok := field.Interface().(net.IP); ok {
-			field.Set(reflect.ValueOf(net.ParseIP(value)))
-		}
 		// TODO: support slice type (https://github.com/antonmashko/envconf/issues/19)
 	case reflect.String:
 		field.SetString(value)
 	default:
-		switch field.Interface().(type) {
-		case url.URL:
-			url, err := url.Parse(value)
-			if err != nil {
-				return err
-			}
-			field.Set(reflect.ValueOf(*url))
-		default:
-			return ErrUnsupportedType
-		}
+		return ErrUnsupportedType
 	}
 	return nil
 }

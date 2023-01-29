@@ -9,9 +9,10 @@ type structType struct {
 	parser *EnvConf
 	p      *structType
 
-	v   reflect.Value
-	t   reflect.Type
-	tag reflect.StructField
+	sname string
+	v     reflect.Value
+	t     reflect.Type
+	tag   reflect.StructField
 
 	hasValue bool
 	fields   []field
@@ -41,8 +42,10 @@ func newStructType(val reflect.Value, parent *structType, tag reflect.StructFiel
 	if parent != nil {
 		p = parent.parser
 	}
+	sname := tag.Tag.Get("envconf")
 	return &structType{
 		parser: p,
+		sname:  sname,
 		p:      parent,
 		v:      val,
 		t:      val.Type(),
@@ -52,6 +55,9 @@ func newStructType(val reflect.Value, parent *structType, tag reflect.StructFiel
 }
 
 func (s *structType) name() string {
+	if s.sname != "" {
+		return s.sname
+	}
 	return s.tag.Name
 }
 

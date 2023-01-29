@@ -65,12 +65,14 @@ type flagSource struct {
 	defined bool
 }
 
-func newFlagSource(tag reflect.StructField, usage string) *flagSource {
-	name := tag.Tag.Get(tagFlag)
-	if name == tagNotDefined {
+func newFlagSource(f field, tag reflect.StructField, usage string) *flagSource {
+	name, ok := tag.Tag.Lookup(tagFlag)
+	if !ok || name == tagNotDefined {
 		name = tagIgnored
-	} else if strings.ToLower(name) == valDefault {
-		name = strings.ToLower(tag.Name)
+	} else if name == valDefault {
+		// generating flag name
+		const flagDelim = "-"
+		name = strings.ToLower(strings.ReplaceAll(fullname(f), fieldNameDelim, flagDelim))
 	}
 	fs := &flagSource{
 		name: name,
@@ -78,7 +80,6 @@ func newFlagSource(tag reflect.StructField, usage string) *flagSource {
 	if name != tagIgnored {
 		flag.Var(fs, name, usage)
 	}
-
 	return fs
 }
 
@@ -107,12 +108,14 @@ type envSource struct {
 	name string
 }
 
-func newEnvSource(tag reflect.StructField) *envSource {
-	name := tag.Tag.Get(tagEnv)
-	if name == tagNotDefined {
+func newEnvSource(f field, tag reflect.StructField) *envSource {
+	name, ok := tag.Tag.Lookup(tagEnv)
+	if !ok || name == tagNotDefined {
 		name = tagIgnored
 	} else if name == valDefault {
-		name = strings.ToUpper(tag.Name)
+		// generating env var name
+		const envDelim = "_"
+		name = strings.ToUpper(strings.ReplaceAll(fullname(f), fieldNameDelim, envDelim))
 	}
 	return &envSource{
 		name: name,

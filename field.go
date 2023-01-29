@@ -5,6 +5,8 @@ import (
 	"reflect"
 )
 
+const fieldNameDelim = "."
+
 type field interface {
 	name() string
 	parent() field
@@ -63,7 +65,6 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 }
 
 func fullname(f field) string {
-	const delim = "."
 	name := f.name()
 	for {
 		f = f.parent()
@@ -72,7 +73,7 @@ func fullname(f field) string {
 		}
 		oname := f.name()
 		if oname != "" {
-			name = oname + delim + name
+			name = oname + fieldNameDelim + name
 		}
 	}
 	return name
