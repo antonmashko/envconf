@@ -101,6 +101,7 @@ type Config struct {
 }
 ```
 Now we'll get `HTTPSERVER_ADDR` as environment variable name.
+[Full example](sample/config-name-autogen/main.go)
 
 ## Configuration Priority
 **Priority**:
