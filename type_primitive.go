@@ -2,10 +2,12 @@ package envconf
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -144,6 +146,12 @@ func setFromString(field reflect.Value, value string) error {
 	case net.IP:
 		field.Set(reflect.ValueOf(net.ParseIP(value)))
 		return nil
+	case time.Time:
+		dt, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(dt))
 	}
 
 	// primitives and collections
@@ -167,26 +175,55 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.SetUint(i)
 	case reflect.Float32, reflect.Float64:
-		i, err := strconv.ParseFloat(value, 64)
+		i, err := strconv.ParseFloat(value, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 		field.SetFloat(i)
-	case reflect.Complex64:
-		i, err := strconv.ParseComplex(value, 64)
+	case reflect.Complex64, reflect.Complex128:
+		i, err := strconv.ParseComplex(value, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 		field.SetComplex(i)
-	case reflect.Complex128:
-		i, err := strconv.ParseComplex(value, 128)
-		if err != nil {
-			return err
+	case reflect.Array:
+		sl := strings.Split(value, ",")
+		for i := range sl {
+			err := setFromString(field.Index(i), sl[i])
+			if err != nil {
+				return err
+			}
 		}
-		field.SetComplex(i)
 	case reflect.Slice:
-		// TODO: support slice type (https://github.com/antonmashko/envconf/issues/19)
+		sl := strings.Split(value, ",")
+		rsl := reflect.MakeSlice(field.Type(), len(sl), cap(sl))
+		for i := range sl {
+			err := setFromString(rsl.Index(i), sl[i])
+			if err != nil {
+				return err
+			}
+		}
+		field.Set(rsl)
+	case reflect.Map:
+		sl := strings.Split(value, ",")
+		log.Println("TUTA", sl)
+		rmp := reflect.MakeMap(field.Type())
+		for i := range sl {
+			idx := strings.IndexRune(sl[i], ':')
+			rvkey := reflect.New(field.Type().Key())
+			rvval := reflect.New(field.Type().Elem())
+			log.Println(idx, rvkey, rvval, sl[i])
+			if idx == -1 {
+				setFromString(rvkey, sl[i])
+			} else {
+				setFromString(rvkey, sl[i][:idx])
+				setFromString(rvval, sl[i][idx+1:])
+			}
+			rmp.SetMapIndex(rvkey, rvval)
+		}
+		field.Set(rmp)
 	case reflect.String:
+	case reflect.Interface:
 		field.SetString(value)
 	default:
 		return ErrUnsupportedType
