@@ -3,6 +3,7 @@ package envconf
 import (
 	"net/url"
 	"reflect"
+	"time"
 )
 
 const fieldNameDelim = "."
@@ -45,7 +46,7 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 	switch v.Kind() {
 	case reflect.Struct:
 		switch v.Interface().(type) {
-		case url.URL:
+		case url.URL, time.Time:
 			return newPrimitiveType(v, p, t)
 		default:
 			return newStructType(v, p, t)

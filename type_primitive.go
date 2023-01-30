@@ -1,7 +1,6 @@
 package envconf
 
 import (
-	"encoding"
 	"fmt"
 	"net"
 	"net/url"
@@ -128,11 +127,7 @@ func (t *primitiveType) IsRequired() bool {
 func setFromString(field reflect.Value, value string) error {
 	value = strings.Trim(value, " ")
 	// native complex types
-	switch it := field.Interface().(type) {
-	case encoding.TextUnmarshaler:
-		return it.UnmarshalText([]byte(value))
-	case encoding.BinaryUnmarshaler:
-		return it.UnmarshalBinary([]byte(value))
+	switch field.Interface().(type) {
 	case url.URL:
 		url, err := url.Parse(value)
 		if err != nil {

@@ -314,6 +314,35 @@ func TestPrimitive_ParseURL_ErrInvalidURL(t *testing.T) {
 	}
 }
 
+func TestPrimitive_ParseTime_Ok(t *testing.T) {
+	data := struct {
+		Time1 *time.Time `env:"TestPrimitive_ParseTime_Ok"`
+		Time2 time.Time  `env:"TestPrimitive_ParseTime_Ok"`
+	}{}
+	expectedValueString := "2006-01-02T15:04:05Z"
+	os.Setenv("TestPrimitive_ParseTime_Ok", expectedValueString)
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal(err)
+	}
+	expectedTime, err := time.Parse(time.RFC3339, expectedValueString)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !expectedTime.Equal(*data.Time1) || !expectedTime.Equal(data.Time2) {
+		t.Fatalf("incorrect value. expected=%v actual1=%v actual2=%v",
+			expectedTime, data.Time1, data.Time2)
+	}
+}
+
+func TestPrimitive_ParseTime_ErrInvalid(t *testing.T) {
+	data := struct {
+		Time1 time.Time `default:";test:test"`
+	}{}
+	if err := envconf.Parse(&data); err == nil {
+		t.Fatal("expected error but got nil")
+	}
+}
+
 func TestParse_UnsupportedFieldWithoutPanic_Ok(t *testing.T) {
 	cfg := struct {
 		Field1 [10]int
