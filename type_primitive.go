@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -96,7 +97,6 @@ func (t *primitiveType) define() error {
 				source: p,
 				value:  v,
 			}
-			// set value
 			return setFromString(t.v, str)
 		}
 	}
@@ -125,6 +125,7 @@ func (t *primitiveType) IsRequired() bool {
 }
 
 func setFromString(field reflect.Value, value string) error {
+	value = strings.Trim(value, " ")
 	// native complex types
 	switch field.Interface().(type) {
 	case url.URL:
@@ -144,10 +145,19 @@ func setFromString(field reflect.Value, value string) error {
 	case net.IP:
 		field.Set(reflect.ValueOf(net.ParseIP(value)))
 		return nil
+	case time.Time:
+		dt, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(dt))
+		return nil
 	}
 
 	// primitives and collections
 	switch field.Kind() {
+	case reflect.String:
+		field.SetString(value)
 	case reflect.Bool:
 		i, err := strconv.ParseBool(value)
 		if err != nil {
@@ -155,39 +165,69 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.SetBool(i)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		i, err := strconv.ParseInt(value, 10, 64)
+		i, err := strconv.ParseInt(value, 0, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 		field.SetInt(i)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		i, err := strconv.ParseUint(value, 10, 64)
+		i, err := strconv.ParseUint(value, 0, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 		field.SetUint(i)
 	case reflect.Float32, reflect.Float64:
-		i, err := strconv.ParseFloat(value, 64)
+		i, err := strconv.ParseFloat(value, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 		field.SetFloat(i)
-	case reflect.Complex64:
-		i, err := strconv.ParseComplex(value, 64)
+	case reflect.Complex64, reflect.Complex128:
+		i, err := strconv.ParseComplex(value, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 		field.SetComplex(i)
-	case reflect.Complex128:
-		i, err := strconv.ParseComplex(value, 128)
-		if err != nil {
-			return err
+	case reflect.Array:
+		sl := strings.Split(value, ",")
+		for i := range sl {
+			err := setFromString(field.Index(i), sl[i])
+			if err != nil {
+				return err
+			}
 		}
-		field.SetComplex(i)
 	case reflect.Slice:
-		// TODO: support slice type (https://github.com/antonmashko/envconf/issues/19)
-	case reflect.String:
-		field.SetString(value)
+		sl := strings.Split(value, ",")
+		rsl := reflect.MakeSlice(field.Type(), len(sl), cap(sl))
+		for i := range sl {
+			err := setFromString(rsl.Index(i), sl[i])
+			if err != nil {
+				return err
+			}
+		}
+		field.Set(rsl)
+	case reflect.Map:
+		sl := strings.Split(value, ",")
+		rmp := reflect.MakeMap(field.Type())
+		for i := range sl {
+			idx := strings.IndexRune(sl[i], ':')
+			rvkey := reflect.New(field.Type().Key()).Elem()
+			rvval := reflect.New(field.Type().Elem()).Elem()
+			if idx == -1 {
+				if err := setFromString(rvkey, sl[i]); err != nil {
+					return err
+				}
+			} else {
+				if err := setFromString(rvkey, sl[i][:idx]); err != nil {
+					return err
+				}
+				if err := setFromString(rvval, sl[i][idx+1:]); err != nil {
+					return err
+				}
+			}
+			rmp.SetMapIndex(rvkey, rvval)
+		}
+		field.Set(rmp)
 	default:
 		return ErrUnsupportedType
 	}

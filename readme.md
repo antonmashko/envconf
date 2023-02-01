@@ -14,14 +14,14 @@ go get github.com/antonmashko/envconf
 ## Parse Configs
 Usually you need a tag with desire configuration sources and execution of a single function `envconf.Parse` for getting all configuration values into your golang structure.
 
-### Supported configuration sources
+### Supported Configurations
 * command line flags
 * environment variables
 * default values
 * external sources (can be anything that is implementing interface [External](https://pkg.go.dev/github.com/antonmashko/envconf#External))
 
-### Supported tags
-**Tags**: 
+### Tags
+Use tags for getting values from different configuration sources.
 - flag - name of flag;   
 - env - name of environment variable;
 - default - if nothing set this value will be used as field value; 
@@ -29,6 +29,16 @@ Usually you need a tag with desire configuration sources and execution of a sing
 - description - field description in help output.
 - envconf - only for structs. override struct name for generating configuration name. 
 
+### Supported Types
+1. Primitives: `bool`, `string`, all types of `int` and `unit`, `float32`, `float64`, `complex64`, `complex128`;
+2. Collections:
+	- Array and Slice - comma-separated string can be converted into slice or array. NOTE: if elements in string more than len of array EnvConf will panic with `index out of range`.
+	- Map - comma-separated string with a colon-separated key and value can be converted into map. example input: `key1:value1, key2:value2`
+3. Golang types:
+	- time.Duration;
+	- time.Time - using `time.RFC3339` as a time.Parse layout argument;
+	- net.IP;
+	- url.URL;
 
 ### Example
 Let's take a look at a simple example. Here we're creating struct with 3 tags for different configuration sources: flag, env, and default value. **NOTE**: It's not necessary to specify tags for each configuration type, add desired only 

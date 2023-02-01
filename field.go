@@ -3,6 +3,7 @@ package envconf
 import (
 	"net/url"
 	"reflect"
+	"time"
 )
 
 const fieldNameDelim = "."
@@ -45,7 +46,7 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 	switch v.Kind() {
 	case reflect.Struct:
 		switch v.Interface().(type) {
-		case url.URL:
+		case url.URL, time.Time:
 			return newPrimitiveType(v, p, t)
 		default:
 			return newStructType(v, p, t)
@@ -53,8 +54,6 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 	case reflect.Ptr:
 		return newPtrType(v, p, t)
 	case reflect.Interface:
-		return emptyField{}
-	case reflect.Map, reflect.Array:
 		return emptyField{}
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types
