@@ -21,7 +21,7 @@ func init() {
 
 type EnvConf struct {
 	Logger   Logger
-	external External
+	external *externalConfig
 	priority []ConfigSource
 	help     *help
 }
@@ -39,7 +39,7 @@ func NewWithExternal(e External) *EnvConf {
 	}
 
 	return &EnvConf{
-		external: e,
+		external: newExternalConfig(e),
 		help:     h,
 		Logger:   debugLogger,
 		priority: []ConfigSource{

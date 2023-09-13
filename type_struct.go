@@ -71,8 +71,10 @@ func (s *structType) parent() field {
 func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
-		rfield := s.v.Field(i)
-		f := createFieldFromValue(rfield, s, s.t.Field(i))
+		rfield := s.v.Field(i)  //reflect.Value
+		stfield := s.t.Field(i) //reflect.StructField
+		f := createFieldFromValue(rfield, s, stfield)
+		s.parser.external.initName(f, stfield)
 		if err := f.init(); err != nil {
 			return err
 		}
@@ -110,16 +112,4 @@ func (s *structType) define() error {
 
 func (s *structType) isSet() bool {
 	return s.hasValue
-}
-
-func (s *structType) Owner() Value {
-	return s.p
-}
-
-func (s *structType) Name() string {
-	return s.name()
-}
-
-func (s *structType) Tag() reflect.StructField {
-	return s.tag
 }

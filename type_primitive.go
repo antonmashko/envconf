@@ -1,6 +1,7 @@
 package envconf
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -63,7 +64,7 @@ func (t *primitiveType) define() error {
 		return errInvalidFiled
 	}
 	if !t.v.CanSet() {
-		return fmt.Errorf("%s: %w", t.Name(), errFiledIsNotSettable)
+		return fmt.Errorf("%s: %w", t.name(), errFiledIsNotSettable)
 	}
 
 	// create correct parse priority
@@ -76,18 +77,11 @@ func (t *primitiveType) define() error {
 		case EnvVariable:
 			v = t.env
 		case ExternalSource:
-			values := []Value{t}
-			var parent Value = t.p
-			for parent != nil && parent.Name() != "" {
-				values = append([]Value{parent}, values...)
-				parent = parent.Owner()
+			val, ok := t.p.parser.external.get(t)
+			if !ok {
+				continue
 			}
-			_, ok := t.p.parser.external.Get(values...)
-			if ok {
-				// field defined in external source
-				return nil
-			}
-			continue
+			return setFromInterface(t.v, val)
 		case DefaultValue:
 			v = t.def
 		}
@@ -102,18 +96,6 @@ func (t *primitiveType) define() error {
 	}
 
 	return errConfigurationNotSpecified
-}
-
-func (t *primitiveType) Owner() Value {
-	return t.p
-}
-
-func (t *primitiveType) Name() string {
-	return t.name()
-}
-
-func (t *primitiveType) Tag() reflect.StructField {
-	return t.sf
 }
 
 func (t *primitiveType) isSet() bool {
@@ -232,4 +214,28 @@ func setFromString(field reflect.Value, value string) error {
 		return ErrUnsupportedType
 	}
 	return nil
+}
+
+func setFromInterface(field reflect.Value, value interface{}) error {
+	ival := reflect.ValueOf(value)
+	itype := ival.Type()
+	if field.Type() == itype {
+		field.Set(ival)
+		return nil
+	}
+
+	switch itype.Kind() {
+	case reflect.Array:
+		panic("unsupported array type")
+	case reflect.Slice:
+		length := ival.Len()
+		vtype := field.Type()
+		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
+		for i := 0; i < length; i++ {
+			setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface()))
+		}
+		field.Set(rsl)
+		return nil
+	}
+	return errors.New("unknown type")
 }
