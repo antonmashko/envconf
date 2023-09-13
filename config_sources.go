@@ -151,14 +151,3 @@ func (s *defaultValueSource) Name() string {
 func (s *defaultValueSource) Value() (string, bool) {
 	return s.v, s.defined
 }
-
-type configVar struct {
-	flag Var
-	env  Var
-	ext  Var
-	def  Var
-}
-
-func newConfigVar(f field, tag reflect.StructField, extConf *externalConfig) *configVar {
-	return &configVar{}
-}

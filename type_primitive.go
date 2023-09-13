@@ -226,7 +226,10 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 
 	switch itype.Kind() {
 	case reflect.Array:
-		panic("unsupported array type")
+		length := ival.Len()
+		for i := 0; i < length; i++ {
+			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
+		}
 	case reflect.Slice:
 		length := ival.Len()
 		vtype := field.Type()
