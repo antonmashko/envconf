@@ -214,7 +214,23 @@ func TestJsonConfig_IncorrectType_Err(t *testing.T) {
 	}
 }
 
-func TestJsonConfig_Map_Err(t *testing.T) {
+func TestJsonConfig_Array_Ok(t *testing.T) {
+	json := `{"foo":[2, 3, 4, 5]}`
+	tc := struct {
+		Foo [4]int `json:"foo"`
+	}{}
+	jconf := envconf.NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo[0] != 2 && tc.Foo[1] != 3 && tc.Foo[2] != 4 && tc.Foo[3] != 5 {
+		t.Errorf("incorrect result: %#v", tc.Foo)
+	}
+}
+
+func TestJsonConfig_Map_Ok(t *testing.T) {
 	json := `{"foo":{"a":"b", "b":"c"}}`
 	tc := struct {
 		Foo map[string]string `json:"foo"`

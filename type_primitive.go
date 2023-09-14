@@ -230,14 +230,20 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		return nil
 	}
 
-	switch itype.Kind() {
+	switch field.Kind() {
 	case reflect.Array:
+		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
 		length := ival.Len()
 		for i := 0; i < length; i++ {
 			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
 		}
 		return nil
 	case reflect.Slice:
+		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
 		length := ival.Len()
 		vtype := field.Type()
 		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
@@ -249,6 +255,9 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		field.Set(rsl)
 		return nil
 	case reflect.Map:
+		if itype.Kind() != reflect.Map {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
 		ftype := field.Type()
 		rmp := reflect.MakeMap(ftype)
 		key := ftype.Key()
