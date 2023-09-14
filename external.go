@@ -94,7 +94,7 @@ func (c *externalConfig) findField(key string, s *structType) (field, bool) {
 	for _, f := range s.fields {
 		// if annotation exists matching only by it
 		sf := f.structField()
-		extName := sf.Tag.Get(c.ext.TagName())
+		extName := c.validateAndFix(sf.Tag.Get(c.ext.TagName()))
 		if extName != "" && key == extName {
 			return f, true
 		}
@@ -110,4 +110,13 @@ func (c *externalConfig) findField(key string, s *structType) (field, bool) {
 	}
 
 	return nil, false
+}
+
+func (c *externalConfig) validateAndFix(name string) string {
+	for i, r := range name {
+		if r == ',' {
+			return name[:i]
+		}
+	}
+	return name
 }
