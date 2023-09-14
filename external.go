@@ -15,11 +15,11 @@ type External interface {
 
 type emptyExt struct{}
 
-func (c *emptyExt) TagName() string {
+func (emptyExt) TagName() string {
 	return ""
 }
 
-func (c *emptyExt) Unmarshal(v interface{}) error { return nil }
+func (emptyExt) Unmarshal(v interface{}) error { return nil }
 
 type externalConfig struct {
 	s    *structType
@@ -35,6 +35,9 @@ func newExternalConfig(ext External) *externalConfig {
 }
 
 func (c *externalConfig) Unmarshal(v interface{}) error {
+	if c.ext == (emptyExt{}) {
+		return nil
+	}
 	mp := make(map[string]interface{})
 	err := c.ext.Unmarshal(&mp)
 	if err != nil {

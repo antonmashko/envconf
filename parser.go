@@ -27,7 +27,7 @@ type EnvConf struct {
 }
 
 func New() *EnvConf {
-	return NewWithExternal(&emptyExt{})
+	return NewWithExternal(emptyExt{})
 }
 
 func NewWithExternal(e External) *EnvConf {
