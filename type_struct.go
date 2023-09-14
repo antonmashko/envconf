@@ -75,9 +75,8 @@ func (s *structType) structField() reflect.StructField {
 func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
-		rfield := s.v.Field(i)  //reflect.Value
-		stfield := s.t.Field(i) //reflect.StructField
-		f := createFieldFromValue(rfield, s, stfield)
+		rfield := s.v.Field(i)
+		f := createFieldFromValue(rfield, s, s.t.Field(i))
 		if err := f.init(); err != nil {
 			return err
 		}

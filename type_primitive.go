@@ -1,8 +1,8 @@
 package envconf
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"reflect"
@@ -195,10 +195,13 @@ func setFromString(field reflect.Value, value string) error {
 	case reflect.Map:
 		sl := strings.Split(value, ",")
 		rmp := reflect.MakeMap(field.Type())
+		ftype := field.Type()
+		key := ftype.Key()
+		elem := ftype.Elem()
 		for i := range sl {
 			idx := strings.IndexRune(sl[i], ':')
-			rvkey := reflect.New(field.Type().Key()).Elem()
-			rvval := reflect.New(field.Type().Elem()).Elem()
+			rvkey := reflect.New(key).Elem()
+			rvval := reflect.New(elem).Elem()
 			if idx == -1 {
 				if err := setFromString(rvkey, sl[i]); err != nil {
 					return err
@@ -215,6 +218,7 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.Set(rmp)
 	default:
+		log.Println(field.Type().String(), value)
 		return ErrUnsupportedType
 	}
 	return nil
@@ -240,12 +244,32 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		vtype := field.Type()
 		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
 		for i := 0; i < length; i++ {
-			setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface()))
+			if err := setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface())); err != nil {
+				return err
+			}
 		}
 		field.Set(rsl)
 		return nil
 	case reflect.Map:
-		return errors.New("unsupported type - map")
+		ftype := field.Type()
+		rmp := reflect.MakeMap(ftype)
+		key := ftype.Key()
+		elem := ftype.Elem()
+		iter := ival.MapRange()
+		for iter.Next() {
+			log.Printf("key:%v val:%v", iter.Key().Interface(), iter.Value().Interface())
+			rvkey := reflect.New(key).Elem()
+			if err := setFromString(rvkey, fmt.Sprint(iter.Key().Interface())); err != nil {
+				return err
+			}
+			rvval := reflect.New(elem).Elem()
+			if err := setFromString(rvval, fmt.Sprint(iter.Value().Interface())); err != nil {
+				return err
+			}
+			rmp.SetMapIndex(rvkey, rvval)
+		}
+		field.Set(rmp)
+		return nil
 	default:
 		return setFromString(field, fmt.Sprint(value))
 	}

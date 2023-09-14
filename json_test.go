@@ -201,7 +201,7 @@ func TestJsonConfig_NonExistConfigValue_Ok(t *testing.T) {
 	}
 }
 
-func TestJsonConfig_PanicOnIncorrectType_Err(t *testing.T) {
+func TestJsonConfig_IncorrectType_Err(t *testing.T) {
 	json := `{"foo":2, "bar":{"abc":3}}`
 	tc := struct {
 		Foo int `json:"foo"`
@@ -211,5 +211,21 @@ func TestJsonConfig_PanicOnIncorrectType_Err(t *testing.T) {
 	jconf.Read([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err == nil {
 		t.Errorf("expected error but got nil")
+	}
+}
+
+func TestJsonConfig_Map_Err(t *testing.T) {
+	json := `{"foo":{"a":"b", "b":"c"}}`
+	tc := struct {
+		Foo map[string]string `json:"foo"`
+	}{}
+	jconf := envconf.NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo["a"] != "b" && tc.Foo["b"] != "c" {
+		t.Errorf("incorrect result: %#v", tc.Foo)
 	}
 }

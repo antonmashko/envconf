@@ -2,6 +2,7 @@ package envconf
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 )
@@ -63,7 +64,7 @@ func (c *externalConfig) fillMap(s *structType, src map[string]interface{}) erro
 		}
 
 		mp, ok := v.(map[string]interface{})
-		if ok {
+		if ok && f.structField().Type.Kind() != reflect.Map {
 			st, ok := f.(*structType)
 			if !ok {
 				return &Error{
