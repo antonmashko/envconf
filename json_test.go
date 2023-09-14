@@ -226,7 +226,7 @@ func TestJsonConfig_Array_Ok(t *testing.T) {
 	}
 
 	if tc.Foo[0] != 2 && tc.Foo[1] != 3 && tc.Foo[2] != 4 && tc.Foo[3] != 5 {
-		t.Errorf("incorrect result: %#v", tc.Foo)
+		t.Errorf("incorrect result: %#v", tc)
 	}
 }
 
@@ -242,6 +242,38 @@ func TestJsonConfig_Map_Ok(t *testing.T) {
 	}
 
 	if tc.Foo["a"] != "b" && tc.Foo["b"] != "c" {
-		t.Errorf("incorrect result: %#v", tc.Foo)
+		t.Errorf("incorrect result: %#v", tc)
+	}
+}
+
+func TestJsonConfig_TagWithExtra_Ok(t *testing.T) {
+	json := `{"bar":123}`
+	tc := struct {
+		Foo int `json:"bar,omitempty"`
+	}{}
+	jconf := envconf.NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo != 123 {
+		t.Errorf("incorrect result: %#v", tc)
+	}
+}
+
+func TestJsonConfig_ZeroValue_Ok(t *testing.T) {
+	json := `{"foo":0}`
+	tc := struct {
+		Foo int `default:"5"`
+	}{}
+	jconf := envconf.NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo != 0 {
+		t.Errorf("incorrect result: %#v", tc)
 	}
 }
