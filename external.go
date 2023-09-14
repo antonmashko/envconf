@@ -114,7 +114,7 @@ func (c *externalConfig) findField(key string, s *structType) (field, bool) {
 
 func (c *externalConfig) validateAndFix(name string) string {
 	for i, r := range name {
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+		if r == ',' {
 			return name[:i]
 		}
 	}
