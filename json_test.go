@@ -277,3 +277,19 @@ func TestJsonConfig_ZeroValue_Ok(t *testing.T) {
 		t.Errorf("incorrect result: %#v", tc)
 	}
 }
+
+func TestJsonConfig_ValueWithSpace_Ok(t *testing.T) {
+	json := `{"foo": "   bar "}`
+	tc := struct {
+		Foo string
+	}{}
+	jconf := envconf.NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo != "   bar " {
+		t.Errorf("incorrect result: %#v", tc)
+	}
+}
