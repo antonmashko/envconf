@@ -2,7 +2,6 @@ package envconf
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"unicode"
 )
@@ -41,8 +40,9 @@ func (c *externalConfig) Unmarshal(v interface{}) error {
 		return err
 	}
 	c.data = make(map[string]interface{})
-	c.fillMap(c.s, mp)
-	log.Printf("ext data: %#v", c.data)
+	if err = c.fillMap(c.s, mp); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -55,7 +55,7 @@ func (c *externalConfig) get(f field) (interface{}, bool) {
 	return v, ok
 }
 
-func (c *externalConfig) fillMap(s *structType, src map[string]interface{}) {
+func (c *externalConfig) fillMap(s *structType, src map[string]interface{}) error {
 	for k, v := range src {
 		f, ok := c.findField(k, s)
 		if !ok {
@@ -66,7 +66,10 @@ func (c *externalConfig) fillMap(s *structType, src map[string]interface{}) {
 		if ok {
 			st, ok := f.(*structType)
 			if !ok {
-				panic(fmt.Sprintf("unable to cast field %s of type %s to struct", fullname(f), f.structField().Type))
+				return &Error{
+					Message:   fmt.Sprintf("unable to cast %s to struct", f.structField().Type),
+					FieldName: fullname(f),
+				}
 			}
 			c.fillMap(st, mp)
 			continue
@@ -74,6 +77,7 @@ func (c *externalConfig) fillMap(s *structType, src map[string]interface{}) {
 
 		c.data[fullname(f)] = v
 	}
+	return nil
 }
 
 func (c *externalConfig) findField(key string, s *structType) (field, bool) {

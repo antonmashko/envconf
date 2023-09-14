@@ -3,7 +3,6 @@ package envconf
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"reflect"
@@ -94,7 +93,6 @@ func (t *primitiveType) define() error {
 			if !ok {
 				continue
 			}
-			log.Printf("set from i: %s val_t: %T f_t: %s", fullname(t), val, t.p.t.String())
 			return setFromInterface(t.v, val)
 		case DefaultValue:
 			v = t.def

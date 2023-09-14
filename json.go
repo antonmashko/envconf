@@ -8,8 +8,6 @@ type JsonConfig struct {
 	data []byte
 }
 
-// DEPRECATED: Do not use this external type
-// It will be moved to the separate package
 func NewJsonConfig() *JsonConfig {
 	return &JsonConfig{}
 }
