@@ -358,3 +358,18 @@ func TestParse_UnsupportedFieldWithoutPanic_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestParse_ValueWithSpace_Ok(t *testing.T) {
+	cfg := struct {
+		Field1 string `env:"TEST_FIELD_1"`
+	}{}
+
+	os.Setenv("TEST_FIELD_1", "  test ")
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.Field1 != "  test " {
+		t.Errorf("incorrect result:%#v", cfg)
+	}
+}

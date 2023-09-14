@@ -110,6 +110,7 @@ func (t *primitiveType) define() error {
 }
 
 func setFromString(field reflect.Value, value string) error {
+	oval := value
 	value = strings.Trim(value, " ")
 	// native complex types
 	switch field.Interface().(type) {
@@ -142,7 +143,7 @@ func setFromString(field reflect.Value, value string) error {
 	// primitives and collections
 	switch field.Kind() {
 	case reflect.String:
-		field.SetString(value)
+		field.SetString(oval)
 	case reflect.Bool:
 		i, err := strconv.ParseBool(value)
 		if err != nil {
