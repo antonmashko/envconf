@@ -83,6 +83,7 @@ func (e *EnvConf) Parse(data interface{}) error {
 	if err != nil {
 		return err
 	}
+	e.external.setParentStruct(p)
 	if err = p.init(); err != nil {
 		return err
 	}

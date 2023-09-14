@@ -116,7 +116,7 @@ func TestSliceJsonConfigFloatOk(t *testing.T) {
 	}
 }
 
-func TestJsonPropertyCamelCaseOk(t *testing.T) {
+func TestJsonConfig_PropertyCamelCase_Ok(t *testing.T) {
 	json := `{
 		"Foo": {
 			"Bar": {
@@ -139,4 +139,79 @@ func TestJsonPropertyCamelCaseOk(t *testing.T) {
 	if tc.Foo.Bar.FooBar != "foo_bar" {
 		t.Errorf("incorrect value was set. %#v", tc.Foo)
 	}
+}
+
+func TestJsonConfig_CaseSensitive_Ok(t *testing.T) {
+	json := `{
+		"abc": 1,
+		"Abc": 2,
+		"ABC": {
+			"abc": 3
+		}
+	}`
+	tc := struct {
+		AbC int `json:"abc"`
+		Abc int
+		ABC struct {
+			ABC int
+		}
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.AbC != 1 || tc.Abc != 2 || tc.ABC.ABC != 3 {
+		t.Errorf("incorrect value was set. %#v", tc)
+	}
+}
+
+func TestJsonConfig_NonExistJsonValueDefaultUse_Ok(t *testing.T) {
+	json := `{"foo":2}`
+	tc := struct {
+		Foo int `json:"foo"`
+		Bar int `json:"bar" default:"5"`
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.Foo != 2 || tc.Bar != 5 {
+		t.Errorf("incorrect value was set. %#v", tc)
+	}
+}
+
+func TestJsonConfig_NonExistConfigValue_Ok(t *testing.T) {
+	json := `{"foo":2, "bar":5}`
+	tc := struct {
+		Foo int `json:"foo"`
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	if tc.Foo != 2 {
+		t.Errorf("incorrect value was set. %#v", tc)
+	}
+}
+
+func TestJsonConfig_PanicOnIncorrectType_Err(t *testing.T) {
+	defer func() {
+		if e := recover(); e == nil {
+			t.Fail()
+		}
+	}()
+	json := `{"foo":2, "bar":{"abc":3}}`
+	tc := struct {
+		Foo int `json:"foo"`
+		Bar int `json:"bar"`
+	}{}
+	jconf := NewJsonConfig()
+	jconf.Read([]byte(json))
+	if err := ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+	t.Fail()
 }

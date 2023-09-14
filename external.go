@@ -1,8 +1,10 @@
 package envconf
 
 import (
-	"reflect"
+	"fmt"
+	"log"
 	"strings"
+	"unicode"
 )
 
 // External config source
@@ -20,16 +22,15 @@ func (c *emptyExt) TagName() string {
 func (c *emptyExt) Unmarshal(v interface{}) error { return nil }
 
 type externalConfig struct {
-	ext   External
-	names map[string]string
-	data  map[string]interface{}
+	s    *structType
+	ext  External
+	data map[string]interface{}
 }
 
 func newExternalConfig(ext External) *externalConfig {
 	return &externalConfig{
-		ext:   ext,
-		names: make(map[string]string),
-		data:  make(map[string]interface{}),
+		ext:  ext,
+		data: make(map[string]interface{}),
 	}
 }
 
@@ -39,38 +40,14 @@ func (c *externalConfig) Unmarshal(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	// normalizing name for the fast access
-	c.fillMap("", mp)
-	c.names = make(map[string]string) //release resource
+	c.data = make(map[string]interface{})
+	c.fillMap(c.s, mp)
+	log.Printf("ext data: %#v", c.data)
 	return nil
 }
 
-func (c *externalConfig) initName(f field, st reflect.StructField) {
-	if f == (emptyField{}) {
-		return
-	}
-	fname := st.Tag.Get(c.ext.TagName())
-	if fname == "" {
-		fname = f.name()
-	}
-
-	if f.parent() != nil && f.parent().name() != "" {
-		parentName := fullname(f.parent())
-		var pname string
-		var ok bool
-		for k, v := range c.names {
-			if strings.EqualFold(v, parentName) {
-				pname = k
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			panic("unable to find parent name: " + fullname(f.parent()))
-		}
-		fname = pname + fieldNameDelim + fname
-	}
-	c.names[strings.ToLower(fname)] = fullname(f)
+func (c *externalConfig) setParentStruct(s *structType) {
+	c.s = s
 }
 
 func (c *externalConfig) get(f field) (interface{}, bool) {
@@ -78,21 +55,51 @@ func (c *externalConfig) get(f field) (interface{}, bool) {
 	return v, ok
 }
 
-func (c *externalConfig) fillMap(srcName string, src map[string]interface{}) {
+func (c *externalConfig) fillMap(s *structType, src map[string]interface{}) {
 	for k, v := range src {
-		if srcName != "" {
-			k = srcName + fieldNameDelim + k
-		}
-		k = strings.ToLower(k)
-		mp, ok := v.(map[string]interface{})
-		if ok {
-			c.fillMap(k, mp)
+		f, ok := c.findField(k, s)
+		if !ok {
 			continue
 		}
-		dstName, ok := c.names[k]
-		if !ok {
-			panic("unable to find dst field name: " + k)
+
+		mp, ok := v.(map[string]interface{})
+		if ok {
+			st, ok := f.(*structType)
+			if !ok {
+				panic(fmt.Sprintf("unable to cast field %s of type %s to struct", fullname(f), f.structField().Type))
+			}
+			c.fillMap(st, mp)
+			continue
 		}
-		c.data[dstName] = v
+
+		c.data[fullname(f)] = v
 	}
+}
+
+func (c *externalConfig) findField(key string, s *structType) (field, bool) {
+	var fr rune
+	for _, r := range key {
+		fr = r
+		break
+	}
+	lc := unicode.IsLower(fr)
+	for _, f := range s.fields {
+		// if annotation exists matching only by it
+		sf := f.structField()
+		extName := sf.Tag.Get(c.ext.TagName())
+		if extName != "" && key == extName {
+			return f, true
+		}
+
+		// unexportable field. looking for any first match with EqualFold
+		if lc && strings.EqualFold(key, sf.Name) {
+			return f, true
+		}
+
+		if key == sf.Name {
+			return f, true
+		}
+	}
+
+	return nil, false
 }

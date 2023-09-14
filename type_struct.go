@@ -68,13 +68,16 @@ func (s *structType) parent() field {
 	return s.p
 }
 
+func (s *structType) structField() reflect.StructField {
+	return s.tag
+}
+
 func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
 		rfield := s.v.Field(i)  //reflect.Value
 		stfield := s.t.Field(i) //reflect.StructField
 		f := createFieldFromValue(rfield, s, stfield)
-		s.parser.external.initName(f, stfield)
 		if err := f.init(); err != nil {
 			return err
 		}

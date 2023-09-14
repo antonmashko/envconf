@@ -3,6 +3,7 @@ package envconf
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"reflect"
@@ -54,6 +55,18 @@ func (t *primitiveType) parent() field {
 	return t.p
 }
 
+func (t *primitiveType) isSet() bool {
+	return t.definedValue != nil
+}
+
+func (t *primitiveType) structField() reflect.StructField {
+	return t.sf
+}
+
+func (t *primitiveType) IsRequired() bool {
+	return t.required
+}
+
 func (t *primitiveType) init() error {
 	return nil
 }
@@ -81,6 +94,7 @@ func (t *primitiveType) define() error {
 			if !ok {
 				continue
 			}
+			log.Printf("set from i: %s val_t: %T f_t: %s", fullname(t), val, t.p.t.String())
 			return setFromInterface(t.v, val)
 		case DefaultValue:
 			v = t.def
@@ -96,14 +110,6 @@ func (t *primitiveType) define() error {
 	}
 
 	return errConfigurationNotSpecified
-}
-
-func (t *primitiveType) isSet() bool {
-	return t.definedValue != nil
-}
-
-func (t *primitiveType) IsRequired() bool {
-	return t.required
 }
 
 func setFromString(field reflect.Value, value string) error {
@@ -230,6 +236,7 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		for i := 0; i < length; i++ {
 			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
 		}
+		return nil
 	case reflect.Slice:
 		length := ival.Len()
 		vtype := field.Type()
@@ -239,6 +246,9 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		}
 		field.Set(rsl)
 		return nil
+	case reflect.Map:
+		return errors.New("unsupported type - map")
+	default:
+		return setFromString(field, fmt.Sprint(value))
 	}
-	return errors.New("unknown type")
 }
