@@ -2,7 +2,6 @@ package envconf
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"reflect"
@@ -218,7 +217,6 @@ func setFromString(field reflect.Value, value string) error {
 		}
 		field.Set(rmp)
 	default:
-		log.Println(field.Type().String(), value)
 		return ErrUnsupportedType
 	}
 	return nil
@@ -257,7 +255,6 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		elem := ftype.Elem()
 		iter := ival.MapRange()
 		for iter.Next() {
-			log.Printf("key:%v val:%v", iter.Key().Interface(), iter.Value().Interface())
 			rvkey := reflect.New(key).Elem()
 			if err := setFromString(rvkey, fmt.Sprint(iter.Key().Interface())); err != nil {
 				return err
