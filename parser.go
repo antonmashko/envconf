@@ -21,13 +21,13 @@ func init() {
 
 type EnvConf struct {
 	Logger   Logger
-	external External
+	external *externalConfig
 	priority []ConfigSource
 	help     *help
 }
 
 func New() *EnvConf {
-	return NewWithExternal(&emptyExt{})
+	return NewWithExternal(emptyExt{})
 }
 
 func NewWithExternal(e External) *EnvConf {
@@ -39,7 +39,7 @@ func NewWithExternal(e External) *EnvConf {
 	}
 
 	return &EnvConf{
-		external: e,
+		external: newExternalConfig(e),
 		help:     h,
 		Logger:   debugLogger,
 		priority: []ConfigSource{
@@ -83,6 +83,7 @@ func (e *EnvConf) Parse(data interface{}) error {
 	if err != nil {
 		return err
 	}
+	e.external.setParentStruct(p)
 	if err = p.init(); err != nil {
 		return err
 	}

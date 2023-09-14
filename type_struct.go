@@ -68,6 +68,10 @@ func (s *structType) parent() field {
 	return s.p
 }
 
+func (s *structType) structField() reflect.StructField {
+	return s.tag
+}
+
 func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
@@ -110,16 +114,4 @@ func (s *structType) define() error {
 
 func (s *structType) isSet() bool {
 	return s.hasValue
-}
-
-func (s *structType) Owner() Value {
-	return s.p
-}
-
-func (s *structType) Name() string {
-	return s.name()
-}
-
-func (s *structType) Tag() reflect.StructField {
-	return s.tag
 }

@@ -53,6 +53,18 @@ func (t *primitiveType) parent() field {
 	return t.p
 }
 
+func (t *primitiveType) isSet() bool {
+	return t.definedValue != nil
+}
+
+func (t *primitiveType) structField() reflect.StructField {
+	return t.sf
+}
+
+func (t *primitiveType) IsRequired() bool {
+	return t.required
+}
+
 func (t *primitiveType) init() error {
 	return nil
 }
@@ -63,7 +75,7 @@ func (t *primitiveType) define() error {
 		return errInvalidFiled
 	}
 	if !t.v.CanSet() {
-		return fmt.Errorf("%s: %w", t.Name(), errFiledIsNotSettable)
+		return fmt.Errorf("%s: %w", t.name(), errFiledIsNotSettable)
 	}
 
 	// create correct parse priority
@@ -76,18 +88,11 @@ func (t *primitiveType) define() error {
 		case EnvVariable:
 			v = t.env
 		case ExternalSource:
-			values := []Value{t}
-			var parent Value = t.p
-			for parent != nil && parent.Name() != "" {
-				values = append([]Value{parent}, values...)
-				parent = parent.Owner()
+			val, ok := t.p.parser.external.get(t)
+			if !ok {
+				continue
 			}
-			_, ok := t.p.parser.external.Get(values...)
-			if ok {
-				// field defined in external source
-				return nil
-			}
-			continue
+			return setFromInterface(t.v, val)
 		case DefaultValue:
 			v = t.def
 		}
@@ -102,26 +107,6 @@ func (t *primitiveType) define() error {
 	}
 
 	return errConfigurationNotSpecified
-}
-
-func (t *primitiveType) Owner() Value {
-	return t.p
-}
-
-func (t *primitiveType) Name() string {
-	return t.name()
-}
-
-func (t *primitiveType) Tag() reflect.StructField {
-	return t.sf
-}
-
-func (t *primitiveType) isSet() bool {
-	return t.definedValue != nil
-}
-
-func (t *primitiveType) IsRequired() bool {
-	return t.required
 }
 
 func setFromString(field reflect.Value, value string) error {
@@ -209,10 +194,13 @@ func setFromString(field reflect.Value, value string) error {
 	case reflect.Map:
 		sl := strings.Split(value, ",")
 		rmp := reflect.MakeMap(field.Type())
+		ftype := field.Type()
+		key := ftype.Key()
+		elem := ftype.Elem()
 		for i := range sl {
 			idx := strings.IndexRune(sl[i], ':')
-			rvkey := reflect.New(field.Type().Key()).Elem()
-			rvval := reflect.New(field.Type().Elem()).Elem()
+			rvkey := reflect.New(key).Elem()
+			rvval := reflect.New(elem).Elem()
 			if idx == -1 {
 				if err := setFromString(rvkey, sl[i]); err != nil {
 					return err
@@ -232,4 +220,63 @@ func setFromString(field reflect.Value, value string) error {
 		return ErrUnsupportedType
 	}
 	return nil
+}
+
+func setFromInterface(field reflect.Value, value interface{}) error {
+	ival := reflect.ValueOf(value)
+	itype := ival.Type()
+	if field.Type() == itype {
+		field.Set(ival)
+		return nil
+	}
+
+	switch field.Kind() {
+	case reflect.Array:
+		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
+		length := ival.Len()
+		for i := 0; i < length; i++ {
+			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
+		}
+		return nil
+	case reflect.Slice:
+		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
+		length := ival.Len()
+		vtype := field.Type()
+		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
+		for i := 0; i < length; i++ {
+			if err := setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface())); err != nil {
+				return err
+			}
+		}
+		field.Set(rsl)
+		return nil
+	case reflect.Map:
+		if itype.Kind() != reflect.Map {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
+		ftype := field.Type()
+		rmp := reflect.MakeMap(ftype)
+		key := ftype.Key()
+		elem := ftype.Elem()
+		iter := ival.MapRange()
+		for iter.Next() {
+			rvkey := reflect.New(key).Elem()
+			if err := setFromString(rvkey, fmt.Sprint(iter.Key().Interface())); err != nil {
+				return err
+			}
+			rvval := reflect.New(elem).Elem()
+			if err := setFromString(rvval, fmt.Sprint(iter.Value().Interface())); err != nil {
+				return err
+			}
+			rmp.SetMapIndex(rvkey, rvval)
+		}
+		field.Set(rmp)
+		return nil
+	default:
+		return setFromString(field, fmt.Sprint(value))
+	}
 }

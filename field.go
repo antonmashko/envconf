@@ -14,6 +14,7 @@ type field interface {
 	init() error
 	define() error
 	isSet() bool
+	structField() reflect.StructField
 }
 
 type requiredField interface {
@@ -40,6 +41,10 @@ func (emptyField) parent() field {
 
 func (emptyField) name() string {
 	return ""
+}
+
+func (emptyField) structField() reflect.StructField {
+	return reflect.StructField{}
 }
 
 func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField) field {

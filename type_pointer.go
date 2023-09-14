@@ -67,3 +67,7 @@ func (f *ptrType) parent() field {
 	}
 	return f.p
 }
+
+func (f *ptrType) structField() reflect.StructField {
+	return f.sf
+}
