@@ -3,27 +3,16 @@ package envconf
 import (
 	"errors"
 	"flag"
-)
 
-var defaultEnvConf *EnvConf
+	"github.com/antonmashko/envconf/option"
+)
 
 // ErrNilData mean that exists nil pointer inside data struct
 var ErrNilData = errors.New("nil data")
 
-// FlagParsed define this callback when you need handle flags
-// This callback will raise after method flag.Parse()
-// return not nil error interrupt pasring
-var FlagParsed func() error
-
-func init() {
-	defaultEnvConf = New()
-}
-
 type EnvConf struct {
-	Logger   Logger
 	external *externalConfig
-	priority []ConfigSource
-	help     *help
+	opts     *option.Options
 }
 
 func New() *EnvConf {
@@ -31,53 +20,94 @@ func New() *EnvConf {
 }
 
 func NewWithExternal(e External) *EnvConf {
-	var h *help
-	if UseCustomHelp {
-		h = &help{
-			fields: make([]*primitiveType, 0),
-		}
-	}
-
 	return &EnvConf{
 		external: newExternalConfig(e),
-		help:     h,
-		Logger:   debugLogger,
-		priority: []ConfigSource{
-			FlagVariable, EnvVariable, ExternalSource, DefaultValue,
+		opts: &option.Options{
+			PriorityOrder: []option.ConfigSource{
+				option.FlagVariable, option.EnvVariable, option.ExternalSource, option.DefaultValue,
+			},
 		},
 	}
 }
 
 func (e *EnvConf) fieldInitialized(f field) {
-	if e.help == nil {
+	if e.opts.OnFieldInitialized == nil || len(e.opts.OnFieldInitialized) == 0 {
 		return
 	}
 	pt, ok := f.(*primitiveType)
 	if !ok {
 		return
 	}
-	e.help.fields = append(e.help.fields, pt)
+	dv, _ := pt.def.Value()
+	for i := range e.opts.OnFieldInitialized {
+		e.opts.OnFieldInitialized[i](option.FieldInitializedArg{
+			Name:         pt.name(),
+			FullName:     fullname(pt),
+			Type:         pt.sf.Type,
+			Required:     pt.required,
+			Description:  pt.desc,
+			FlagName:     pt.flag.Name(),
+			EnvName:      pt.env.Name(),
+			DefaultValue: dv,
+		})
+	}
 }
 
 func (e *EnvConf) fieldDefined(f field) {
-	pt, ok := f.(*primitiveType)
-	if !ok || pt.definedValue == nil {
+	if e.opts.OnFieldDefined == nil || len(e.opts.OnFieldDefined) == 0 {
 		return
 	}
-	e.Logger.Printf("envconf: set variable name=%s value=%v source=%s",
-		fullname(pt), pt.definedValue.value, pt.definedValue.source)
+	pt, ok := f.(*primitiveType)
+	if !ok {
+		return
+	}
+	if pt.definedValue == nil {
+		return
+	}
+	dv, _ := pt.def.Value()
+	for i := range e.opts.OnFieldDefined {
+		e.opts.OnFieldDefined[i](option.FieldDefinedArg{
+			Name:         pt.name(),
+			FullName:     fullname(pt),
+			Type:         pt.sf.Type,
+			Required:     pt.required,
+			Description:  pt.desc,
+			FlagName:     pt.flag.Name(),
+			EnvName:      pt.env.Name(),
+			DefaultValue: dv,
+			Source:       pt.definedValue.source,
+			Value:        pt.definedValue.value,
+		})
+	}
 }
 
 func (e *EnvConf) fieldNotDefined(f field, err error) {
-	e.Logger.Printf("skipping error due not required field. field=%s err=%s",
-		fullname(f), err)
+	// e.printErr(f, err, "skipping error because the field is not required.")
+	if e.opts.OnFieldDefineErr == nil || len(e.opts.OnFieldDefineErr) == 0 {
+		return
+	}
+	pt, ok := f.(*primitiveType)
+	if !ok {
+		return
+	}
+
+	for i := range e.opts.OnFieldDefineErr {
+		e.opts.OnFieldDefineErr[i](option.FieldDefineErrorArg{
+			Name:     pt.name(),
+			FullName: fullname(pt),
+			Err:      err,
+		})
+	}
 }
 
 // Parse define variables inside data from different sources,
 // such as flag/environment variable or default value
-func (e *EnvConf) Parse(data interface{}) error {
+func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 	if data == nil {
 		return ErrNilData
+	}
+	for i := range opts {
+		opts[i].Apply(e.opts)
 	}
 	p, err := newParentStructType(data, e)
 	if err != nil {
@@ -87,12 +117,12 @@ func (e *EnvConf) Parse(data interface{}) error {
 	if err = p.init(); err != nil {
 		return err
 	}
-	if e.help != nil {
-		flag.Usage = e.help.usage
+	if e.opts.Usage != nil {
+		flag.Usage = e.opts.Usage
 	}
 	flag.Parse()
-	if FlagParsed != nil {
-		if err = FlagParsed(); err != nil {
+	if e.opts.FlagParsed != nil {
+		if err = e.opts.FlagParsed(); err != nil {
 			return err
 		}
 	}
@@ -102,64 +132,29 @@ func (e *EnvConf) Parse(data interface{}) error {
 	return p.define()
 }
 
-// SetPriorityOrder overrides default priority order.
-// Default priority order is: Flag, Environment variable, External source, Default value.
-func (e *EnvConf) SetPriorityOrder(s ...ConfigSource) {
-	if len(s) == 0 {
-		return
-	}
-	po := make(map[ConfigSource]int)
-	var idx int
-	for _, p := range s {
-		if p != FlagVariable && p != EnvVariable &&
-			p != ExternalSource && p != DefaultValue {
-			continue
-		}
-		if _, ok := po[p]; !ok {
-			po[p] = idx
-			idx++
-		}
-	}
-	if len(po) == 0 {
-		return
-	}
-	result := make([]ConfigSource, len(po))
-	for s, idx := range po {
-		result[idx] = s
-	}
-	e.priority = result
-}
-
 // PriorityOrder return parsing priority order
-func (e *EnvConf) PriorityOrder() []ConfigSource {
-	return e.priority
+func (e *EnvConf) PriorityOrder() []option.ConfigSource {
+	return e.opts.PriorityOrder
 }
 
 // Parse define variables inside data from different sources,
 // such as flag/environment variable or default value
-func Parse(data interface{}) error {
-	return defaultEnvConf.Parse(data)
+func Parse(data interface{}, opts ...option.ClientOption) error {
+	return New().Parse(data, opts...)
 }
 
 // ParseWithExternal works same as Parse method but also can be used external sources
 // (config files, key-value storages, etc.).
-func ParseWithExternal(data interface{}, external External) error {
-	ecfg := NewWithExternal(external)
-	ecfg.Logger = defaultEnvConf.Logger
-	ecfg.SetPriorityOrder(defaultEnvConf.PriorityOrder()...)
-	return ecfg.Parse(data)
+func ParseWithExternal(data interface{}, external External, opts ...option.ClientOption) error {
+	return NewWithExternal(external).Parse(data, opts...)
 }
 
-// SetLogger define debug logger.
+// SetLogger define debug printer.
 // This logger will print defined values in data fields
-func SetLogger(logger Logger) {
-	if logger != nil {
-		defaultEnvConf.Logger = logger
-	}
-}
-
-// SetPriority overrides default priority order.
-// Default priority order is: Flag, Environment variable, External source, Default value.
-func SetPriority(s ...ConfigSource) {
-	defaultEnvConf.SetPriorityOrder(s...)
-}
+// func SetOptions(opts ...option.ClientOption) {
+// 	for i := range opts {
+// 		if opts[i] != nil {
+// 			opts[i].Apply(defaultEnvConf.opts)
+// 		}
+// 	}
+// }
