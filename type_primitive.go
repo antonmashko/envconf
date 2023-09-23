@@ -12,6 +12,10 @@ import (
 	"github.com/antonmashko/envconf/option"
 )
 
+type valueExtractor interface {
+	Value() (interface{}, bool)
+}
+
 type definedValue struct {
 	source option.ConfigSource
 	value  interface{}
@@ -22,12 +26,12 @@ type primitiveType struct {
 	p  *structType
 	sf reflect.StructField
 
-	flag     Var    // flag value
-	env      Var    // env value
-	ext      Var    // external value
-	def      Var    // default value
-	required bool   // if it defined true, value should be defined
-	desc     string // description
+	flag     *flagSource          // flag value
+	env      *envSource           // env value
+	ext      *externalValueSource // external value
+	def      *defaultValueSource  // default value
+	required bool                 // if it defined true, value should be defined
+	desc     string               // description
 
 	definedValue *definedValue
 }
@@ -85,7 +89,7 @@ func (t *primitiveType) define() error {
 	// create correct parse priority
 	priority := t.p.parser.PriorityOrder()
 	for _, p := range priority {
-		var vr Var
+		var vr valueExtractor
 		switch p {
 		case option.FlagVariable:
 			vr = t.flag

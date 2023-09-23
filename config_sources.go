@@ -30,12 +30,6 @@ var (
 	errConfigurationNotSpecified = errors.New("configuration not specified")
 )
 
-// Var is configuration variable for defining primitive data types
-type Var interface {
-	Name() string
-	Value() (interface{}, bool)
-}
-
 type flagSource struct {
 	name    string
 	v       string
