@@ -1,12 +1,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/antonmashko/envconf"
+	"github.com/antonmashko/envconf/external"
 	"github.com/antonmashko/envconf/option"
 )
 
@@ -27,16 +26,13 @@ type Example struct {
 func main() {
 	var cfg Example
 	jsonConf := &envconf.Json{}
-	configFilePath := flag.String("config", "./conf.json", "")
-	fpOpt := option.WithFlagParsed(func() error {
-		b, err := os.ReadFile(*configFilePath)
-		if err != nil {
-			return err
-		}
-		*jsonConf = envconf.Json(b)
-		return nil
-	})
-	err := envconf.ParseWithExternal(&cfg, jsonConf, option.WithLog(log.Default()), fpOpt)
+	err := envconf.ParseWithExternal(&cfg, jsonConf,
+		option.WithLog(log.Default()),
+		external.WithFlagConfigFile("config", "./conf.json", "", func(b []byte) error {
+			*jsonConf = envconf.Json(b)
+			return nil
+		}),
+	)
 	if err != nil {
 		panic(err)
 	}

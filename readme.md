@@ -114,6 +114,9 @@ type Config struct {
 Now we'll get `HTTPSERVER_ADDR` as environment variable name.
 See: [EnvConf example](example/main.go)
 
+## External
+reading json config
+see: [example](example/main.go)
 
 ## Options
 Options allow intercept into `EnvConf.Parse` process
