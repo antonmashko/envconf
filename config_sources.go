@@ -1,7 +1,6 @@
 package envconf
 
 import (
-	"errors"
 	"flag"
 	"os"
 	"reflect"
@@ -20,11 +19,6 @@ const (
 	valIgnored    = "ignored"
 	valNotDefined = "N/D"
 	valDefault    = "*"
-)
-
-var (
-	ErrUnsupportedType       = errors.New("unsupported type")
-	ErrConfigurationNotFound = errors.New("configuration not found")
 )
 
 type flagSource struct {

@@ -101,7 +101,7 @@ func asImpl(field reflect.Value) func([]byte) error {
 		// ----
 		return nil
 	}
-	// NOTE: max
+	// NOTE: max double pointer support
 	for i := 0; i < 3; i++ {
 		resF := f(field.Interface())
 		if resF != nil {

@@ -35,10 +35,8 @@ Use tags for getting values from different configuration sources.
 	- Array and Slice - comma-separated string can be converted into slice or array. NOTE: if elements in string more than len of array EnvConf will panic with `index out of range`.
 	- Map - comma-separated string with a colon-separated key and value can be converted into map. example input: `key1:value1, key2:value2`
 3. Golang types:
-	- time.Duration;
-	- time.Time - using `time.RFC3339` as a time.Parse layout argument;
-	- net.IP;
-	- url.URL;
+	- time.Duration
+	- Types that are implementing [encoding.TextUnmarshaller](https://pkg.go.dev/encoding#TextUnmarshaler) and [encoding.BinaryUnmarshaller](https://pkg.go.dev/encoding#BinaryUnmarshaler). e.g. time.Time, net.ID, url.URL;
 
 ### Example
 Let's take a look at a simple example. Here we're creating struct with 3 tags for different configuration sources: flag, env, and default value. **NOTE**: It's not necessary to specify tags for each configuration type, add desired only 

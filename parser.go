@@ -1,14 +1,10 @@
 package envconf
 
 import (
-	"errors"
 	"flag"
 
 	"github.com/antonmashko/envconf/option"
 )
-
-// ErrNilData mean that exists nil pointer inside data struct
-var ErrNilData = errors.New("nil data")
 
 type EnvConf struct {
 	external *externalConfig
