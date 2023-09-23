@@ -34,3 +34,17 @@ func TestWithCustomUsage_Ok(t *testing.T) {
 		t.Fatal("unexpected result: ", buff.String())
 	}
 }
+
+func TestWithoutCustomUsage_Ok(t *testing.T) {
+	opt := WithCustomUsage()
+	opts := &Options{}
+	opt.Apply(opts)
+	if opts.onFieldInitialized == nil || opts.Usage() == nil {
+		t.Fatal("opts.onFieldInitialized or opts.Usage() is nil")
+	}
+	opt = WithoutCustomUsage()
+	opt.Apply(opts)
+	if opts.onFieldInitialized != nil || opts.Usage() != nil {
+		t.Fatal("opts.onFieldInitialized or opts.Usage() is not nil")
+	}
+}

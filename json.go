@@ -21,8 +21,5 @@ func (j *JsonConfig) Read(data []byte) {
 }
 
 func (j *JsonConfig) Unmarshal(v interface{}) error {
-	if j.data == nil {
-		return nil
-	}
 	return json.Unmarshal(j.data, v)
 }

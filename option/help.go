@@ -44,11 +44,23 @@ func (h *help) Apply(opts *Options) {
 	opts.onFieldInitialized = h.addField
 }
 
-// WithCustomUsage generates usage for -help flag from input struct
+// WithCustomUsage generates usage for -help flag from input struct.
+// By default EnvConf uses this function. Use `option.WithoutCustomUsage` to disable it
 func WithCustomUsage() ClientOption {
 	h := &help{
 		out:    flag.CommandLine.Output(),
 		fields: make([]FieldInitializedArg, 0),
 	}
 	return h
+}
+
+type disableHelp struct{}
+
+func (disableHelp) Apply(opts *Options) {
+	opts.usage = nil
+	opts.onFieldInitialized = nil
+}
+
+func WithoutCustomUsage() ClientOption {
+	return disableHelp{}
 }

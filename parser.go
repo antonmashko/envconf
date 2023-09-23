@@ -85,6 +85,8 @@ func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 	if data == nil {
 		return ErrNilData
 	}
+	// enable help output
+	option.WithCustomUsage().Apply(e.opts)
 	for i := range opts {
 		opts[i].Apply(e.opts)
 	}

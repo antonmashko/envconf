@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/antonmashko/envconf"
+	"github.com/antonmashko/envconf/option"
 )
 
 type Example struct {
@@ -21,8 +23,7 @@ type Example struct {
 // Run `go run main.go --help` for getting help output with auto-generated names
 func main() {
 	var cfg Example
-	// envconf.SetLogger(log.New(os.Stdout, "envconf", log.Ldate|log.Ltime))
-	if err := envconf.Parse(&cfg); err != nil {
+	if err := envconf.Parse(&cfg, option.WithLog(log.Default()), option.WithCustomUsage()); err != nil {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", cfg)
