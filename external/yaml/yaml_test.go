@@ -19,8 +19,7 @@ b:
 			D        []int `yaml:",flow"`
 		}
 	}{}
-	extConf := NewYamlConf()
-	extConf.Read([]byte(data))
+	extConf := Yaml([]byte(data))
 	err := extConf.Unmarshal(&tc)
 	if err != nil {
 		t.Error("unexpected error")
