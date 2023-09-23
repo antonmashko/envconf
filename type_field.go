@@ -1,9 +1,8 @@
 package envconf
 
 import (
+	"errors"
 	"fmt"
-	"net"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -21,7 +20,7 @@ type definedValue struct {
 	value  interface{}
 }
 
-type primitiveType struct {
+type fieldType struct {
 	v  reflect.Value
 	p  *structType
 	sf reflect.StructField
@@ -36,10 +35,10 @@ type primitiveType struct {
 	definedValue *definedValue
 }
 
-func newPrimitiveType(v reflect.Value, p *structType, sf reflect.StructField) *primitiveType {
+func newFieldType(v reflect.Value, p *structType, sf reflect.StructField) *fieldType {
 	desc := sf.Tag.Get(tagDescription)
 	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
-	f := &primitiveType{
+	f := &fieldType{
 		p:        p,
 		v:        v,
 		sf:       sf,
@@ -53,39 +52,31 @@ func newPrimitiveType(v reflect.Value, p *structType, sf reflect.StructField) *p
 	return f
 }
 
-func (t *primitiveType) name() string {
+func (t *fieldType) name() string {
 	return t.sf.Name
 }
 
-func (t *primitiveType) parent() field {
+func (t *fieldType) parent() field {
 	return t.p
 }
 
-func (t *primitiveType) isSet() bool {
+func (t *fieldType) isSet() bool {
 	return t.definedValue != nil
 }
 
-func (t *primitiveType) structField() reflect.StructField {
+func (t *fieldType) structField() reflect.StructField {
 	return t.sf
 }
 
-func (t *primitiveType) IsRequired() bool {
+func (t *fieldType) IsRequired() bool {
 	return t.required
 }
 
-func (t *primitiveType) init() error {
+func (t *fieldType) init() error {
 	return nil
 }
 
-func (t *primitiveType) define() error {
-	// validate reflect value
-	if !t.v.IsValid() {
-		return errInvalidFiled
-	}
-	if !t.v.CanSet() {
-		return fmt.Errorf("%s: %w", t.name(), errFiledIsNotSettable)
-	}
-
+func (t *fieldType) define() error {
 	// create correct parse priority
 	priority := t.p.parser.PriorityOrder()
 	for _, p := range priority {
@@ -125,37 +116,86 @@ func (t *primitiveType) define() error {
 		return nil
 	}
 
-	return errConfigurationNotSpecified
+	return ErrConfigurationNotFound
+}
+
+func setFromInterface(field reflect.Value, value interface{}) error {
+	ival := reflect.ValueOf(value)
+	itype := ival.Type()
+	if field.Type() == itype {
+		field.Set(ival)
+		return nil
+	}
+
+	switch field.Kind() {
+	case reflect.Array:
+		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
+		length := ival.Len()
+		for i := 0; i < length; i++ {
+			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
+		}
+		return nil
+	case reflect.Slice:
+		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
+		length := ival.Len()
+		vtype := field.Type()
+		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
+		for i := 0; i < length; i++ {
+			if err := setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface())); err != nil {
+				return err
+			}
+		}
+		field.Set(rsl)
+		return nil
+	case reflect.Map:
+		if itype.Kind() != reflect.Map {
+			return fmt.Errorf("unable to cast %s to array", itype)
+		}
+		ftype := field.Type()
+		rmp := reflect.MakeMap(ftype)
+		key := ftype.Key()
+		elem := ftype.Elem()
+		iter := ival.MapRange()
+		for iter.Next() {
+			rvkey := reflect.New(key).Elem()
+			if err := setFromString(rvkey, fmt.Sprint(iter.Key().Interface())); err != nil {
+				return err
+			}
+			rvval := reflect.New(elem).Elem()
+			if err := setFromString(rvval, fmt.Sprint(iter.Value().Interface())); err != nil {
+				return err
+			}
+			rmp.SetMapIndex(rvkey, rvval)
+		}
+		field.Set(rmp)
+		return nil
+	default:
+		return setFromString(field, fmt.Sprint(value))
+	}
 }
 
 func setFromString(field reflect.Value, value string) error {
+	if implF := asImpl(field); implF != nil {
+		return implF([]byte(value))
+	}
 	oval := value
 	value = strings.Trim(value, " ")
+	if !field.CanSet() {
+		return errors.New("reflect: cannot set")
+	}
+
 	// native complex types
 	switch field.Interface().(type) {
-	case url.URL:
-		url, err := url.Parse(value)
-		if err != nil {
-			return err
-		}
-		field.Set(reflect.ValueOf(*url))
-		return nil
 	case time.Duration:
 		d, err := time.ParseDuration(value)
 		if err != nil {
 			return err
 		}
 		field.SetInt(d.Nanoseconds())
-		return nil
-	case net.IP:
-		field.Set(reflect.ValueOf(net.ParseIP(value)))
-		return nil
-	case time.Time:
-		dt, err := time.Parse(time.RFC3339, value)
-		if err != nil {
-			return err
-		}
-		field.Set(reflect.ValueOf(dt))
 		return nil
 	}
 
@@ -240,63 +280,4 @@ func setFromString(field reflect.Value, value string) error {
 		return ErrUnsupportedType
 	}
 	return nil
-}
-
-func setFromInterface(field reflect.Value, value interface{}) error {
-	ival := reflect.ValueOf(value)
-	itype := ival.Type()
-	if field.Type() == itype {
-		field.Set(ival)
-		return nil
-	}
-
-	switch field.Kind() {
-	case reflect.Array:
-		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
-			return fmt.Errorf("unable to cast %s to array", itype)
-		}
-		length := ival.Len()
-		for i := 0; i < length; i++ {
-			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
-		}
-		return nil
-	case reflect.Slice:
-		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
-			return fmt.Errorf("unable to cast %s to array", itype)
-		}
-		length := ival.Len()
-		vtype := field.Type()
-		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
-		for i := 0; i < length; i++ {
-			if err := setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface())); err != nil {
-				return err
-			}
-		}
-		field.Set(rsl)
-		return nil
-	case reflect.Map:
-		if itype.Kind() != reflect.Map {
-			return fmt.Errorf("unable to cast %s to array", itype)
-		}
-		ftype := field.Type()
-		rmp := reflect.MakeMap(ftype)
-		key := ftype.Key()
-		elem := ftype.Elem()
-		iter := ival.MapRange()
-		for iter.Next() {
-			rvkey := reflect.New(key).Elem()
-			if err := setFromString(rvkey, fmt.Sprint(iter.Key().Interface())); err != nil {
-				return err
-			}
-			rvval := reflect.New(elem).Elem()
-			if err := setFromString(rvval, fmt.Sprint(iter.Value().Interface())); err != nil {
-				return err
-			}
-			rmp.SetMapIndex(rvkey, rvval)
-		}
-		field.Set(rmp)
-		return nil
-	default:
-		return setFromString(field, fmt.Sprint(value))
-	}
 }

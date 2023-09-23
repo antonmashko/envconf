@@ -99,7 +99,7 @@ func (s *structType) define() error {
 			}
 
 			s.parser.fieldNotDefined(f, err)
-			if err == errConfigurationNotSpecified {
+			if err == ErrConfigurationNotFound {
 				continue
 			}
 			return err

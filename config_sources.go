@@ -23,11 +23,8 @@ const (
 )
 
 var (
-	//errors
-	errInvalidFiled              = errors.New("invalid field")
-	errFiledIsNotSettable        = errors.New("field is not settable")
-	ErrUnsupportedType           = errors.New("unsupported type")
-	errConfigurationNotSpecified = errors.New("configuration not specified")
+	ErrUnsupportedType       = errors.New("unsupported type")
+	ErrConfigurationNotFound = errors.New("configuration not found")
 )
 
 type flagSource struct {
