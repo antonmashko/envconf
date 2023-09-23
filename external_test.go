@@ -20,8 +20,7 @@ func TestExternal_newExternalConfig_Ok(t *testing.T) {
 }
 
 func TestExternal_InvalidJson_Err(t *testing.T) {
-	jsonConf := NewJsonConfig()
-	jsonConf.Read([]byte("<test></test>"))
+	jsonConf := Json([]byte("<test></test>"))
 	ext := newExternalConfig(jsonConf)
 	tc := struct {
 		Foo int

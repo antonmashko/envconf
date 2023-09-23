@@ -1,10 +1,12 @@
 package envconf_test
 
 import (
+	"errors"
 	"os"
 	"testing"
 
 	"github.com/antonmashko/envconf"
+	"github.com/antonmashko/envconf/option"
 )
 
 func TestPriority_FromFlag_Ok(t *testing.T) {
@@ -16,8 +18,7 @@ func TestPriority_FromFlag_Ok(t *testing.T) {
 		Field string `flag:"ptest-field1" env:"TEST_FIELD" default:"default-variable"`
 	}{}
 	ecfg := envconf.New()
-	ecfg.SetPriorityOrder(envconf.FlagVariable, envconf.EnvVariable, envconf.DefaultValue)
-	if err := ecfg.Parse(&data); err != nil {
+	if err := ecfg.Parse(&data, option.WithPriorityOrder(option.FlagVariable, option.EnvVariable, option.DefaultValue)); err != nil {
 		t.Fatal("Parse: ", err)
 	}
 	if data.Field != expected {
@@ -34,8 +35,7 @@ func TestPriority_FromEnv_Ok(t *testing.T) {
 		Field string `flag:"ptest-field2" env:"TEST_FIELD" default:"default-variable"`
 	}{}
 	ecfg := envconf.New()
-	ecfg.SetPriorityOrder(envconf.EnvVariable, envconf.FlagVariable, envconf.DefaultValue)
-	if err := ecfg.Parse(&data); err != nil {
+	if err := ecfg.Parse(&data, option.WithPriorityOrder(option.EnvVariable, option.FlagVariable, option.DefaultValue)); err != nil {
 		t.Fatal("Parse: ", err)
 	}
 	if data.Field != expected {
@@ -52,8 +52,7 @@ func TestPriority_FromDefault_Ok(t *testing.T) {
 		Field string `flag:"ptest-field3" env:"TEST_FIELD" default:"default-variable"`
 	}{}
 	ecfg := envconf.New()
-	ecfg.SetPriorityOrder(envconf.DefaultValue, envconf.FlagVariable, envconf.EnvVariable)
-	if err := ecfg.Parse(&data); err != nil {
+	if err := ecfg.Parse(&data, option.WithPriorityOrder(option.DefaultValue, option.FlagVariable, option.EnvVariable)); err != nil {
 		t.Fatal("Parse: ", err)
 	}
 
@@ -71,8 +70,7 @@ func TestPriority_EmptyPriorityDefineFromFlag_Ok(t *testing.T) {
 		Field string `flag:"ptest-field4" env:"TEST_FIELD" default:"default-variable"`
 	}{}
 	ecfg := envconf.New()
-	ecfg.SetPriorityOrder()
-	if err := ecfg.Parse(&data); err != nil {
+	if err := ecfg.Parse(&data, option.WithPriorityOrder()); err != nil {
 		t.Fatal("Parse: ", err)
 	}
 
@@ -90,12 +88,40 @@ func TestPriority_InvalidConfigSourceDefineFromFlag_Ok(t *testing.T) {
 		Field string `flag:"ptest-field5" env:"TEST_FIELD" default:"default-variable"`
 	}{}
 	ecfg := envconf.New()
-	ecfg.SetPriorityOrder(envconf.ConfigSource(123), envconf.ConfigSource(124))
-	if err := ecfg.Parse(&data); err != nil {
+	if err := ecfg.Parse(&data, option.WithPriorityOrder(option.ConfigSource(123), option.ConfigSource(124))); err != nil {
 		t.Fatal("Parse: ", err)
 	}
-
 	if data.Field != expected {
 		t.Fatalf("incorrect result. expected=%s actual=%s", expected, data.Field)
+	}
+}
+
+func TestFlagParsed_Ok(t *testing.T) {
+	data := struct {
+		Field string `flag:"ptest-field6" env:"TEST_FIELD" default:"default-variable"`
+	}{}
+	var fb bool
+	err := envconf.Parse(&data, option.WithFlagParsed(func() error {
+		fb = true
+		return nil
+	}))
+	if err != nil {
+		t.Fatal("unexpected error: ", err)
+	}
+	if !fb {
+		t.Fatal("callback not invoked: ", err)
+	}
+}
+
+func TestFlagParsed_Err(t *testing.T) {
+	cErr := errors.New("custom error")
+	data := struct {
+		Field string `flag:"ptest-field7" env:"TEST_FIELD" default:"default-variable"`
+	}{}
+	err := envconf.Parse(&data, option.WithFlagParsed(func() error {
+		return cErr
+	}))
+	if err != cErr {
+		t.Fatal("wrong error:", err)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/antonmashko/envconf"
+	"github.com/antonmashko/envconf/option"
 )
 
 func TestParse_EmptyStruct_OK(t *testing.T) {
@@ -37,12 +38,12 @@ func TestParse_PassDataByValue_Err(t *testing.T) {
 
 func TestParse_FlagParsedCallback_OK(t *testing.T) {
 	x := 0
-	envconf.FlagParsed = func() error {
+	fpo := option.WithFlagParsed(func() error {
 		x = 1
 		return nil
-	}
+	})
 	tc := struct{}{}
-	if err := envconf.Parse(&tc); err != nil {
+	if err := envconf.Parse(&tc, fpo); err != nil {
 		t.Errorf("failed to parse. err=%s", err)
 	}
 	if x != 1 {
