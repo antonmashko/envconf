@@ -1,6 +1,16 @@
 package envconf
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var (
+	// ErrNilData mean that exists nil pointer inside data struct
+	ErrNilData               = errors.New("nil data")
+	ErrUnsupportedType       = errors.New("unsupported type")
+	ErrConfigurationNotFound = errors.New("configuration not found")
+)
 
 type Error struct {
 	Inner     error

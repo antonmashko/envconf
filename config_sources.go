@@ -1,7 +1,6 @@
 package envconf
 
 import (
-	"errors"
 	"flag"
 	"os"
 	"reflect"
@@ -20,14 +19,6 @@ const (
 	valIgnored    = "ignored"
 	valNotDefined = "N/D"
 	valDefault    = "*"
-)
-
-var (
-	//errors
-	errInvalidFiled              = errors.New("invalid field")
-	errFiledIsNotSettable        = errors.New("field is not settable")
-	ErrUnsupportedType           = errors.New("unsupported type")
-	errConfigurationNotSpecified = errors.New("configuration not specified")
 )
 
 type flagSource struct {
@@ -116,14 +107,6 @@ func newExternalValueSource(f field, ext *externalConfig) *externalValueSource {
 	}
 }
 
-func (s *externalValueSource) Name() string {
-	name, ok := s.f.structField().Tag.Lookup(tagEnv)
-	if !ok {
-		name = s.f.name()
-	}
-	return name
-}
-
 func (s *externalValueSource) Value() (interface{}, bool) {
 	return s.ext.get(s.f)
 }
@@ -137,10 +120,6 @@ func newDefaultValueSource(tag reflect.StructField) *defaultValueSource {
 	var s defaultValueSource
 	s.v, s.defined = tag.Tag.Lookup(tagDefault)
 	return &s
-}
-
-func (s *defaultValueSource) Name() string {
-	return tagDefault
 }
 
 func (s *defaultValueSource) Value() (interface{}, bool) {

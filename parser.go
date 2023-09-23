@@ -1,14 +1,10 @@
 package envconf
 
 import (
-	"errors"
 	"flag"
 
 	"github.com/antonmashko/envconf/option"
 )
-
-// ErrNilData mean that exists nil pointer inside data struct
-var ErrNilData = errors.New("nil data")
 
 type EnvConf struct {
 	external *externalConfig
@@ -27,7 +23,7 @@ func NewWithExternal(e External) *EnvConf {
 }
 
 func (e *EnvConf) fieldInitialized(f field) {
-	pt, ok := f.(*primitiveType)
+	pt, ok := f.(*fieldType)
 	if !ok {
 		return
 	}
@@ -45,7 +41,7 @@ func (e *EnvConf) fieldInitialized(f field) {
 }
 
 func (e *EnvConf) fieldDefined(f field) {
-	pt, ok := f.(*primitiveType)
+	pt, ok := f.(*fieldType)
 	if !ok {
 		return
 	}
@@ -68,7 +64,7 @@ func (e *EnvConf) fieldDefined(f field) {
 }
 
 func (e *EnvConf) fieldNotDefined(f field, err error) {
-	pt, ok := f.(*primitiveType)
+	pt, ok := f.(*fieldType)
 	if !ok {
 		return
 	}
