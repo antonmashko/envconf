@@ -114,11 +114,17 @@ type Config struct {
 Now we'll get `HTTPSERVER_ADDR` as environment variable name.
 See: [EnvConf example](example/main.go)
 
-## Configuration Priority
-**Priority**:
-```
-1) Flag 
-2) Environment variable 
-3) External source
-4) Default value
-```
+## External
+reading json config
+see: [example](example/main.go)
+
+## Options
+Options allow intercept into `EnvConf.Parse` process
+
+Name|Option|Description
+---|---|---
+Read configuration priority|`option.WithPriorityOrder`|Change default parsing priority. Default: *Flag*, *Environment variable*, *External source*, *Default Value*
+Log|`option.WithLog`|Enable logging over parsing process. Prints defined and not defined configuration fields
+Custom Usage|`option.WithCustomUsage`|Generate usage for `-help` flag from input structure. By default this option is enabled, use `option.WithoutCustomUsage` option
+Flag Parsed Callback|`option.WithFlagParsed`|This callback allow to use flags after flag.Parse() and before EnvConf.Define process
+Read config file|`external.WithFlagConfigFile`|Read config file from the path specified in the flag

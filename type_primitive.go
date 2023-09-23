@@ -8,10 +8,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/antonmashko/envconf/option"
 )
 
+type valueExtractor interface {
+	Value() (interface{}, bool)
+}
+
 type definedValue struct {
-	source ConfigSource
+	source option.ConfigSource
 	value  interface{}
 }
 
@@ -20,11 +26,12 @@ type primitiveType struct {
 	p  *structType
 	sf reflect.StructField
 
-	flag     Var    // flag value
-	env      Var    // env value
-	def      Var    // default value
-	required bool   // if it defined true, value should be defined
-	desc     string // description
+	flag     *flagSource          // flag value
+	env      *envSource           // env value
+	ext      *externalValueSource // external value
+	def      *defaultValueSource  // default value
+	required bool                 // if it defined true, value should be defined
+	desc     string               // description
 
 	definedValue *definedValue
 }
@@ -42,6 +49,7 @@ func newPrimitiveType(v reflect.Value, p *structType, sf reflect.StructField) *p
 	}
 	f.flag = newFlagSource(f, sf, desc)
 	f.env = newEnvSource(f, sf)
+	f.ext = newExternalValueSource(f, p.parser.external)
 	return f
 }
 
@@ -81,35 +89,47 @@ func (t *primitiveType) define() error {
 	// create correct parse priority
 	priority := t.p.parser.PriorityOrder()
 	for _, p := range priority {
-		var v Var
+		var vr valueExtractor
 		switch p {
-		case FlagVariable:
-			v = t.flag
-		case EnvVariable:
-			v = t.env
-		case ExternalSource:
-			val, ok := t.p.parser.external.get(t)
-			if !ok {
-				continue
-			}
-			return setFromInterface(t.v, val)
-		case DefaultValue:
-			v = t.def
+		case option.FlagVariable:
+			vr = t.flag
+		case option.EnvVariable:
+			vr = t.env
+		case option.ExternalSource:
+			vr = t.ext
+		case option.DefaultValue:
+			vr = t.def
 		}
 
-		if str, ok := v.Value(); ok {
-			t.definedValue = &definedValue{
-				source: p,
-				value:  v,
-			}
-			return setFromString(t.v, str)
+		v, ok := vr.Value()
+		if !ok {
+			continue
 		}
+
+		var err error
+		if str, ok := v.(string); ok {
+			err = setFromString(t.v, str)
+		} else {
+			err = setFromInterface(t.v, v)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		t.definedValue = &definedValue{
+			source: p,
+			value:  v,
+		}
+
+		return nil
 	}
 
 	return errConfigurationNotSpecified
 }
 
 func setFromString(field reflect.Value, value string) error {
+	oval := value
 	value = strings.Trim(value, " ")
 	// native complex types
 	switch field.Interface().(type) {
@@ -142,7 +162,7 @@ func setFromString(field reflect.Value, value string) error {
 	// primitives and collections
 	switch field.Kind() {
 	case reflect.String:
-		field.SetString(value)
+		field.SetString(oval)
 	case reflect.Bool:
 		i, err := strconv.ParseBool(value)
 		if err != nil {

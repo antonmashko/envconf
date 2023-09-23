@@ -8,29 +8,6 @@ import (
 	"strings"
 )
 
-type ConfigSource int
-
-const (
-	FlagVariable ConfigSource = iota
-	EnvVariable
-	ExternalSource
-	DefaultValue
-)
-
-func (s ConfigSource) String() string {
-	switch s {
-	case FlagVariable:
-		return "Flag"
-	case EnvVariable:
-		return "Environment"
-	case ExternalSource:
-		return "External"
-	case DefaultValue:
-		return "Default"
-	}
-	return ""
-}
-
 const (
 	tagFlag        = "flag"
 	tagEnv         = "env"
@@ -52,12 +29,6 @@ var (
 	ErrUnsupportedType           = errors.New("unsupported type")
 	errConfigurationNotSpecified = errors.New("configuration not specified")
 )
-
-// Var is configuration variable for defining primitive data types
-type Var interface {
-	Name() string
-	Value() (string, bool)
-}
 
 type flagSource struct {
 	name    string
@@ -87,7 +58,7 @@ func (s *flagSource) Name() string {
 	return s.name
 }
 
-func (s *flagSource) Value() (string, bool) {
+func (s *flagSource) Value() (interface{}, bool) {
 	if s.name == tagIgnored {
 		return "", false
 	}
@@ -126,11 +97,35 @@ func (s *envSource) Name() string {
 	return s.name
 }
 
-func (s *envSource) Value() (string, bool) {
+func (s *envSource) Value() (interface{}, bool) {
 	if s.name != tagIgnored {
 		return os.LookupEnv(s.name)
 	}
 	return "", false
+}
+
+type externalValueSource struct {
+	f   field
+	ext *externalConfig
+}
+
+func newExternalValueSource(f field, ext *externalConfig) *externalValueSource {
+	return &externalValueSource{
+		f:   f,
+		ext: ext,
+	}
+}
+
+func (s *externalValueSource) Name() string {
+	name, ok := s.f.structField().Tag.Lookup(tagEnv)
+	if !ok {
+		name = s.f.name()
+	}
+	return name
+}
+
+func (s *externalValueSource) Value() (interface{}, bool) {
+	return s.ext.get(s.f)
 }
 
 type defaultValueSource struct {
@@ -148,6 +143,6 @@ func (s *defaultValueSource) Name() string {
 	return tagDefault
 }
 
-func (s *defaultValueSource) Value() (string, bool) {
+func (s *defaultValueSource) Value() (interface{}, bool) {
 	return s.v, s.defined
 }
