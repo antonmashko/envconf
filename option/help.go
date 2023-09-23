@@ -1,17 +1,19 @@
 package option
 
 import (
+	"flag"
 	"fmt"
-	"os"
+	"io"
 )
 
 type help struct {
+	out    io.Writer
 	fields []FieldInitializedArg
 }
 
 func (h *help) usage() {
-	fmt.Fprintln(os.Stdout, "Usage:")
-	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(h.out, "Usage:")
+	fmt.Fprintln(h.out, "")
 	h.print()
 }
 
@@ -23,14 +25,14 @@ func (h *help) print() {
 
 func (h *help) printValue(f FieldInitializedArg) {
 	// TODO: help should be configurable
-	fmt.Fprintf(os.Stdout, "%s <%s> %s\n", f.FullName, f.Type.Name(), f.DefaultValue)
-	fmt.Fprintf(os.Stdout, "\tflag: %s\n", f.FlagName)
-	fmt.Fprintf(os.Stdout, "\tenvironment variable: %s\n", f.EnvName)
-	fmt.Fprintf(os.Stdout, "\trequired: %t\n", f.Required)
+	fmt.Fprintf(h.out, "%s <%s> %s\n", f.FullName, f.Type.Name(), f.DefaultValue)
+	fmt.Fprintf(h.out, "\tflag: %s\n", f.FlagName)
+	fmt.Fprintf(h.out, "\tenvironment variable: %s\n", f.EnvName)
+	fmt.Fprintf(h.out, "\trequired: %t\n", f.Required)
 	if f.Description != "" {
-		fmt.Fprintf(os.Stdout, "\tdescription: \"%s\"\n", f.Description)
+		fmt.Fprintf(h.out, "\tdescription: \"%s\"\n", f.Description)
 	}
-	fmt.Fprintln(os.Stdout)
+	fmt.Fprintln(h.out)
 }
 
 func (h *help) addField(arg FieldInitializedArg) {
@@ -38,12 +40,14 @@ func (h *help) addField(arg FieldInitializedArg) {
 }
 
 func (h *help) Apply(opts *Options) {
-	opts.Usage = h.usage
-	opts.OnFieldInitialized = append(opts.OnFieldInitialized, h.addField)
+	opts.usage = h.usage
+	opts.onFieldInitialized = h.addField
 }
 
-func WithFlagUsage() ClientOption {
+// WithCustomUsage generates usage for -help flag from input struct
+func WithCustomUsage() ClientOption {
 	h := &help{
+		out:    flag.CommandLine.Output(),
 		fields: make([]FieldInitializedArg, 0),
 	}
 	return h

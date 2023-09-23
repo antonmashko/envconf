@@ -3,7 +3,7 @@ package option
 type flagParsedFunc func() error
 
 func (fP flagParsedFunc) Apply(opts *Options) {
-	opts.FlagParsed = fP
+	opts.flagParsed = fP
 }
 
 // WithFlagParsed define this callback when you need handle flags

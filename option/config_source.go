@@ -26,7 +26,7 @@ func (s ConfigSource) String() string {
 type priorityOrder []ConfigSource
 
 func (p priorityOrder) Apply(opts *Options) {
-	opts.PriorityOrder = p
+	opts.priorityOrder = p
 }
 
 // WithPriorityOrder overrides default priority order, with an order from function argument.
