@@ -11,8 +11,7 @@ func TestJsonConfig_SimpleExternalJsonConfig_OK(t *testing.T) {
 	tc := struct {
 		Foo string `default:"fail"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -26,8 +25,7 @@ func TestJsonConfig_SimpleExternalFieldWithUnderscore_OK(t *testing.T) {
 	tc := struct {
 		FooBar string `json:"foo_bar" default:"fail"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -51,8 +49,7 @@ func TestJsonConfig_NestedStructExternal_OK(t *testing.T) {
 			}
 		}
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -72,8 +69,7 @@ func TestJsonConfig_NestedStructExternalFieldWithUnderscore_OK(t *testing.T) {
 			FooBar string `json:"foo_bar" default:"fail"`
 		} `json:"foo_bar"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -91,8 +87,7 @@ func TestJsonConfig_Slice_OK(t *testing.T) {
 	tc := struct {
 		Foo []int
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -110,8 +105,7 @@ func TestJsonConfig_SliceFloat_Ok(t *testing.T) {
 	tc := struct {
 		Foo []float32
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -135,8 +129,7 @@ func TestJsonConfig_PropertyCamelCase_Ok(t *testing.T) {
 			}
 		}
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -160,8 +153,7 @@ func TestJsonConfig_CaseSensitive_Ok(t *testing.T) {
 			ABC int
 		}
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -176,8 +168,7 @@ func TestJsonConfig_NonExistJsonValueDefaultUse_Ok(t *testing.T) {
 		Foo int `json:"foo"`
 		Bar int `json:"bar" default:"5"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -191,8 +182,7 @@ func TestJsonConfig_NonExistConfigValue_Ok(t *testing.T) {
 	tc := struct {
 		Foo int `json:"foo"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -207,8 +197,7 @@ func TestJsonConfig_IncorrectType_Err(t *testing.T) {
 		Foo int `json:"foo"`
 		Bar int `json:"bar"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err == nil {
 		t.Errorf("expected error but got nil")
 	}
@@ -219,8 +208,7 @@ func TestJsonConfig_Array_Ok(t *testing.T) {
 	tc := struct {
 		Foo [4]int `json:"foo"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -235,8 +223,7 @@ func TestJsonConfig_Map_Ok(t *testing.T) {
 	tc := struct {
 		Foo map[string]string `json:"foo"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -251,8 +238,7 @@ func TestJsonConfig_TagWithExtra_Ok(t *testing.T) {
 	tc := struct {
 		Foo int `json:"bar,omitempty"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -267,8 +253,7 @@ func TestJsonConfig_ZeroValue_Ok(t *testing.T) {
 	tc := struct {
 		Foo int `default:"5"`
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
@@ -283,8 +268,7 @@ func TestJsonConfig_ValueWithSpace_Ok(t *testing.T) {
 	tc := struct {
 		Foo string
 	}{}
-	jconf := envconf.NewJsonConfig()
-	jconf.Read([]byte(json))
+	jconf := envconf.Json([]byte(json))
 	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
