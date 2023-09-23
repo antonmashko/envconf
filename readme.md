@@ -127,3 +127,4 @@ Read configuration priority|`option.WithPriorityOrder`|Change default parsing pr
 Log|`option.WithLog`|Enable logging over parsing process. Prints defined and not defined configuration fields
 Custom Usage|`option.WithCustomUsage`|Generate usage for `-help` flag from input structure. By default this option is enabled, use `option.WithoutCustomUsage` option
 Flag Parsed Callback|`option.WithFlagParsed`|This callback allow to use flags after flag.Parse() and before EnvConf.Define process
+Read config file|`external.WithFlagConfigFile`|Read config file from the path specified in the flag
