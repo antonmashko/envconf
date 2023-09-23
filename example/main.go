@@ -23,7 +23,7 @@ type Example struct {
 // Run `go run main.go --help` for getting help output with auto-generated names
 func main() {
 	var cfg Example
-	if err := envconf.Parse(&cfg, option.WithLog(log.Default()), option.WithCustomUsage()); err != nil {
+	if err := envconf.Parse(&cfg, option.WithLog(log.Default())); err != nil {
 		panic(err)
 	}
 	fmt.Printf("%#v\n", cfg)
