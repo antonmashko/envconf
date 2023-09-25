@@ -105,7 +105,11 @@ func (t *fieldType) define() error {
 		}
 
 		if err != nil {
-			return err
+			return &Error{
+				Inner:     err,
+				FieldName: fullname(t),
+				Message:   "cannot define field",
+			}
 		}
 
 		t.definedValue = &definedValue{
