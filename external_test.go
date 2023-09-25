@@ -1,12 +1,13 @@
 package envconf
 
 import (
+	"reflect"
 	"testing"
 )
 
 func TestExternal_EmpExt_Ok(t *testing.T) {
 	e := emptyExt{}
-	if e.TagName() != "" || e.Unmarshal(nil) != nil {
+	if !reflect.DeepEqual(e.TagName(), []string{}) || e.Unmarshal(nil) != nil {
 		t.Error("unexpected result")
 	}
 }
@@ -16,7 +17,7 @@ func TestExternal_newExternalConfig_Ok(t *testing.T) {
 	if ext == nil {
 		t.Fail()
 	}
-	if ext.Unmarshal(nil) != nil {
+	if ext.unmarshal(nil, nil) != nil {
 		t.Error("unexpected result")
 	}
 }
@@ -27,7 +28,7 @@ func TestExternal_InvalidJson_Err(t *testing.T) {
 	tc := struct {
 		Foo int
 	}{}
-	if ext.Unmarshal(&tc) == nil {
+	if ext.unmarshal(reflect.TypeOf(tc), &tc) == nil {
 		t.Error("unexpected error got nil")
 	}
 }

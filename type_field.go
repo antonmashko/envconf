@@ -100,8 +100,6 @@ func (t *fieldType) define() error {
 		var err error
 		if str, ok := v.(string); ok {
 			err = setFromString(t.v, str)
-		} else {
-			err = setFromInterface(t.v, v)
 		}
 
 		if err != nil {
@@ -121,78 +119,6 @@ func (t *fieldType) define() error {
 	}
 
 	return ErrConfigurationNotFound
-}
-
-func setFromInterface(field reflect.Value, value interface{}) error {
-	ival := reflect.ValueOf(value)
-	itype := ival.Type()
-	if field.Type() == itype {
-		field.Set(ival)
-		return nil
-	}
-
-	switch field.Kind() {
-	case reflect.Struct:
-		if itype.Kind() != reflect.Map {
-			return ErrUnsupportedType
-		}
-		iter := ival.MapRange()
-		for iter.Next() {
-			if err := setFromInterface(field.FieldByName(iter.Key().String()), iter.Value()); err != nil {
-				return err
-			}
-		}
-		return nil
-	case reflect.Array:
-		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
-			return fmt.Errorf("unable to cast %s to array", itype)
-		}
-		length := ival.Len()
-		for i := 0; i < length; i++ {
-			if err := setFromInterface(field.Index(i), ival.Index(i).Interface()); err != nil {
-				return err
-			}
-		}
-		return nil
-	case reflect.Slice:
-		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
-			return fmt.Errorf("unable to cast %s to slice", itype)
-		}
-		length := ival.Len()
-		vtype := field.Type()
-		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
-		for i := 0; i < length; i++ {
-			if err := setFromInterface(rsl.Index(i), ival.Index(i).Interface()); err != nil {
-				return err
-			}
-		}
-		field.Set(rsl)
-		return nil
-	case reflect.Map:
-		if itype.Kind() != reflect.Map {
-			return fmt.Errorf("unable to cast %s to array", itype)
-		}
-		ftype := field.Type()
-		rmp := reflect.MakeMap(ftype)
-		key := ftype.Key()
-		elem := ftype.Elem()
-		iter := ival.MapRange()
-		for iter.Next() {
-			rvkey := reflect.New(key).Elem()
-			if err := setFromInterface(rvkey, iter.Key().Interface()); err != nil {
-				return err
-			}
-			rvval := reflect.New(elem).Elem()
-			if err := setFromInterface(rvval, iter.Value().Interface()); err != nil {
-				return err
-			}
-			rmp.SetMapIndex(rvkey, rvval)
-		}
-		field.Set(rmp)
-		return nil
-	default:
-		return setFromString(field, fmt.Sprint(value))
-	}
 }
 
 func setFromString(field reflect.Value, value string) error {
