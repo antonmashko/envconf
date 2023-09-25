@@ -106,9 +106,9 @@ func (t *fieldType) define() error {
 
 		if err != nil {
 			return &Error{
-				Inner:     err,
+				Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
 				FieldName: fullname(t),
-				Message:   "cannot define field",
+				Message:   "cannot set",
 			}
 		}
 
