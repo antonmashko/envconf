@@ -132,24 +132,37 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 	}
 
 	switch field.Kind() {
+	case reflect.Struct:
+		if itype.Kind() != reflect.Map {
+			return ErrUnsupportedType
+		}
+		iter := ival.MapRange()
+		for iter.Next() {
+			if err := setFromInterface(field.FieldByName(iter.Key().String()), iter.Value()); err != nil {
+				return err
+			}
+		}
+		return nil
 	case reflect.Array:
 		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
 			return fmt.Errorf("unable to cast %s to array", itype)
 		}
 		length := ival.Len()
 		for i := 0; i < length; i++ {
-			setFromString(field.Index(i), fmt.Sprint(ival.Index(i).Interface()))
+			if err := setFromInterface(field.Index(i), ival.Index(i).Interface()); err != nil {
+				return err
+			}
 		}
 		return nil
 	case reflect.Slice:
 		if ikind := itype.Kind(); ikind != reflect.Array && ikind != reflect.Slice {
-			return fmt.Errorf("unable to cast %s to array", itype)
+			return fmt.Errorf("unable to cast %s to slice", itype)
 		}
 		length := ival.Len()
 		vtype := field.Type()
 		rsl := reflect.MakeSlice(vtype, ival.Cap(), length)
 		for i := 0; i < length; i++ {
-			if err := setFromString(rsl.Index(i), fmt.Sprint(ival.Index(i).Interface())); err != nil {
+			if err := setFromInterface(rsl.Index(i), ival.Index(i).Interface()); err != nil {
 				return err
 			}
 		}
@@ -166,11 +179,11 @@ func setFromInterface(field reflect.Value, value interface{}) error {
 		iter := ival.MapRange()
 		for iter.Next() {
 			rvkey := reflect.New(key).Elem()
-			if err := setFromString(rvkey, fmt.Sprint(iter.Key().Interface())); err != nil {
+			if err := setFromInterface(rvkey, iter.Key().Interface()); err != nil {
 				return err
 			}
 			rvval := reflect.New(elem).Elem()
-			if err := setFromString(rvval, fmt.Sprint(iter.Value().Interface())); err != nil {
+			if err := setFromInterface(rvval, iter.Value().Interface()); err != nil {
 				return err
 			}
 			rmp.SetMapIndex(rvkey, rvval)

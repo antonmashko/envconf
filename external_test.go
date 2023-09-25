@@ -1,6 +1,8 @@
 package envconf
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestExternal_EmpExt_Ok(t *testing.T) {
 	e := emptyExt{}
