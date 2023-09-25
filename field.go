@@ -62,6 +62,9 @@ func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField)
 	case reflect.Ptr:
 		return newPtrType(v, p, t)
 	case reflect.Interface:
+		if v.IsValid() && !v.IsZero() {
+			return createFieldFromValue(v.Elem(), p, t)
+		}
 		return emptyField{}
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types

@@ -12,7 +12,7 @@ import (
 // where interface{} should be also same map type for the nested structures
 type External interface {
 	// TagName is key name in golang struct tag (json, yaml, toml etc.).
-	TagName() string
+	TagName() []string
 	// Unmarshal parses the external data and stores the result
 	// in the value pointed to by v.
 	// Usually, it just wraps the existing `Unmarshal` function of third-party libraries
@@ -21,14 +21,13 @@ type External interface {
 
 type emptyExt struct{}
 
-func (emptyExt) TagName() string {
-	return ""
+func (emptyExt) TagName() []string {
+	return []string{}
 }
 
 func (emptyExt) Unmarshal(v interface{}) error { return nil }
 
 type externalConfig struct {
-	s    reflect.Type
 	ext  External
 	data map[string]interface{}
 }
@@ -40,16 +39,20 @@ func newExternalConfig(ext External) *externalConfig {
 	}
 }
 
-func (c *externalConfig) Unmarshal(v interface{}) error {
+func (c *externalConfig) unmarshal(rf reflect.Type, v interface{}) error {
 	if c.ext == (emptyExt{}) {
 		return nil
 	}
-	mp := make(map[string]interface{})
-	err := c.ext.Unmarshal(&mp)
+	err := c.ext.Unmarshal(v)
 	if err != nil {
 		return err
 	}
-	c.data, err = c.normalizeMap(c.s, mp)
+	mp := make(map[string]interface{})
+	err = c.ext.Unmarshal(&mp)
+	if err != nil {
+		return err
+	}
+	c.data, err = c.normalizeMap(rf, mp)
 	if err != nil {
 		return err
 	}
@@ -144,11 +147,16 @@ func (c *externalConfig) normalize(rf reflect.Type, v interface{}) (interface{},
 }
 
 func (c *externalConfig) equal(key string, lc bool, sf reflect.StructField) bool {
-	tagName, ok := sf.Tag.Lookup(c.ext.TagName())
-	if ok {
-		extName := c.validateAndFix(tagName)
-		if key == extName {
-			return true
+	for _, tagName := range c.ext.TagName() {
+		tag, ok := sf.Tag.Lookup(tagName)
+		if ok {
+			idx := strings.IndexRune(tag, ',')
+			if idx != -1 {
+				tag = tag[:idx]
+			}
+			if key == tag {
+				return true
+			}
 		}
 	}
 
@@ -162,12 +170,4 @@ func (c *externalConfig) equal(key string, lc bool, sf reflect.StructField) bool
 	}
 
 	return false
-}
-
-func (c *externalConfig) validateAndFix(name string) string {
-	idx := strings.IndexRune(name, ',')
-	if idx != -1 {
-		return name[:idx]
-	}
-	return name
 }

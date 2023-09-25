@@ -90,7 +90,6 @@ func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 	if err != nil {
 		return err
 	}
-	e.external.s = p.t
 	if err = p.init(); err != nil {
 		return err
 	}
@@ -103,7 +102,7 @@ func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 			return err
 		}
 	}
-	if err = e.external.Unmarshal(data); err != nil {
+	if err = e.external.unmarshal(p.t, data); err != nil {
 		return err
 	}
 	return p.define()
