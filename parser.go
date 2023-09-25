@@ -90,7 +90,7 @@ func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 	if err != nil {
 		return err
 	}
-	e.external.setParentStruct(p)
+	e.external.s = p.t
 	if err = p.init(); err != nil {
 		return err
 	}

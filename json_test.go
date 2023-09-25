@@ -277,3 +277,22 @@ func TestJsonConfig_ValueWithSpace_Ok(t *testing.T) {
 		t.Errorf("incorrect result: %#v", tc)
 	}
 }
+
+func TestJsonConfig_SliceOfStructs_Ok(t *testing.T) {
+	json := `{"foo": [
+		{"f1":"bar1"}
+	]}`
+	tc := struct {
+		Foo []struct {
+			Field1 string `json:"f1"`
+		}
+	}{}
+	jconf := envconf.Json([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Errorf("failed to external parse. err=%s", err)
+	}
+
+	if len(tc.Foo) < 1 || tc.Foo[0].Field1 != "bar1" {
+		t.Errorf("incorrect result: %#v", tc)
+	}
+}
