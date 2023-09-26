@@ -27,6 +27,9 @@ func newPtrType(v reflect.Value, p field, sf reflect.StructField, parser *EnvCon
 }
 
 func (f *ptrType) init() error {
+	if !f.v.CanSet() {
+		return nil
+	}
 	tmp := f.v
 	for tmp.Kind() == reflect.Ptr {
 		if tmp.IsNil() {
@@ -53,9 +56,6 @@ func (f *ptrType) define() error {
 	}
 
 	if f.field.isSet() && f.tmp != nil {
-		if !f.tmp.CanSet() {
-			return nil
-		}
 		f.v.Set(*f.tmp)
 	}
 
