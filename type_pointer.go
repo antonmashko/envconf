@@ -7,20 +7,22 @@ import (
 type ptrType struct {
 	field
 
-	p  *structType
-	v  reflect.Value
-	sf reflect.StructField
+	p      field
+	v      reflect.Value
+	sf     reflect.StructField
+	parser *EnvConf
 
 	tmp *reflect.Value
 }
 
-func newPtrType(v reflect.Value, p *structType, sf reflect.StructField) *ptrType {
+func newPtrType(v reflect.Value, p field, sf reflect.StructField, parser *EnvConf) *ptrType {
 	return &ptrType{
-		field: emptyField{},
-		p:     p,
-		v:     v,
-		sf:    sf,
-		tmp:   nil,
+		field:  emptyField{},
+		p:      p,
+		v:      v,
+		sf:     sf,
+		parser: parser,
+		tmp:    nil,
 	}
 }
 
@@ -40,7 +42,7 @@ func (f *ptrType) init() error {
 		}
 	}
 
-	f.field = createFieldFromValue(tmp, f.p, f.sf)
+	f.field = createFieldFromValue(tmp, f.p, f.sf, f.parser)
 	return f.field.init()
 }
 

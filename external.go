@@ -3,6 +3,7 @@ package envconf
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -39,7 +40,7 @@ func newExternalConfig(ext External) *externalConfig {
 	}
 }
 
-func (c *externalConfig) unmarshal(rf reflect.Type, v interface{}) error {
+func (c *externalConfig) unmarshal(v interface{}) error {
 	if c.ext == (emptyExt{}) {
 		return nil
 	}
@@ -52,11 +53,35 @@ func (c *externalConfig) unmarshal(rf reflect.Type, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	c.data, err = c.normalizeMap(rf, mp)
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	c.data, err = c.normalizeMap(rv, mp)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *externalConfig) readFrom(key string, ic interface{}) (interface{}, bool) {
+	switch vt := ic.(type) {
+	case map[string]interface{}:
+		var ok bool
+		ic, ok = vt[key]
+		return ic, ok
+	case []interface{}:
+		idx, err := strconv.Atoi(key)
+		if err != nil {
+			return nil, false
+		}
+		if idx >= len(vt) {
+			return nil, false
+		}
+		return vt[idx], true
+	default:
+		return nil, false
+	}
 }
 
 func (c *externalConfig) get(f field) (interface{}, bool) {
@@ -71,18 +96,21 @@ func (c *externalConfig) get(f field) (interface{}, bool) {
 
 	// ignoring top level struct
 	path = path[1:]
-	var mp map[string]interface{} = c.data
-	if len(path) > 1 {
-		for i := 0; i < len(path)-1; i++ {
-			mp = mp[path[i].Name].(map[string]interface{})
+	var ic interface{} = c.data
+	var ok bool
+	for i := 0; i < len(path); i++ {
+		ic, ok = c.readFrom(path[i].Name, ic)
+		if !ok {
+			return nil, false
+		}
+		if ok && i == len(path)-1 {
+			return ic, true
 		}
 	}
-
-	v, ok := mp[path[len(path)-1].Name]
-	return v, ok
+	return nil, false
 }
 
-func (c *externalConfig) normalizeMap(rt reflect.Type, mp map[string]interface{}) (map[string]interface{}, error) {
+func (c *externalConfig) normalizeMap(rv reflect.Value, mp map[string]interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	for k, v := range mp {
 		var fr rune
@@ -92,25 +120,27 @@ func (c *externalConfig) normalizeMap(rt reflect.Type, mp map[string]interface{}
 		}
 		lc := unicode.IsLower(fr)
 		// normalizing names(keys) in map
-		for i := 0; i < rt.NumField(); i++ {
-			f := rt.Field(i)
-			if !c.equal(k, lc, f) {
+		rt := rv.Type()
+		for i := 0; i < rv.NumField(); i++ {
+			sf := rt.Field(i)
+			f := rv.Field(i)
+			if !c.equal(k, lc, sf) {
 				continue
 			}
-			val, err := c.normalize(f.Type, v)
+			val, err := c.normalize(f, v)
 			if err != nil {
 				return nil, err
 			}
-			result[f.Name] = val
+			result[sf.Name] = val
 			break
 		}
 	}
 	return result, nil
 }
 
-func (c *externalConfig) normalizeSlice(rt reflect.Type, sl []interface{}) ([]interface{}, error) {
+func (c *externalConfig) normalizeSlice(rv reflect.Value, sl []interface{}) ([]interface{}, error) {
 	for i := range sl {
-		v, err := c.normalize(rt, sl[i])
+		v, err := c.normalize(rv.Index(i), sl[i])
 		if err != nil {
 			return nil, err
 		}
@@ -119,26 +149,36 @@ func (c *externalConfig) normalizeSlice(rt reflect.Type, sl []interface{}) ([]in
 	return sl, nil
 }
 
-func (c *externalConfig) normalize(rf reflect.Type, v interface{}) (interface{}, error) {
+func (c *externalConfig) normalize(rv reflect.Value, v interface{}) (interface{}, error) {
 	switch vt := v.(type) {
 	case map[string]interface{}:
-		switch rf.Kind() {
+		switch rv.Kind() {
 		case reflect.Map:
 			return vt, nil
 		case reflect.Struct:
-			return c.normalizeMap(rf, vt)
+			return c.normalizeMap(rv, vt)
+		case reflect.Interface:
+			if rv.IsValid() && !rv.IsZero() {
+				return c.normalize(rv.Elem(), v)
+			}
+			return vt, nil
+		case reflect.Pointer:
+			if rv.IsValid() && !rv.IsZero() {
+				return c.normalize(rv.Elem(), v)
+			}
+			return vt, nil
 		default:
 			return nil, &Error{
-				Message: fmt.Sprint("unable to cast map[string]interface{} into ", rf.String()),
+				Message: fmt.Sprint("unable to cast map[string]interface{} into ", rv.Type().Name()),
 			}
 		}
 	case []interface{}:
-		switch rf.Kind() {
+		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
-			return c.normalizeSlice(rf.Elem(), vt)
+			return c.normalizeSlice(rv, vt)
 		default:
 			return nil, &Error{
-				Message: fmt.Sprint("unable to cast []interface{} into ", rf.String()),
+				Message: fmt.Sprint("unable to cast []interface{} into ", rv.Type().String()),
 			}
 		}
 	default:

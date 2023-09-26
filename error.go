@@ -19,5 +19,16 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("%s '%s'. %s", e.Message, e.FieldName, e.Inner)
+	msg := e.Message
+	if e.FieldName != "" {
+		msg = fmt.Sprintf("%s: %s", e.FieldName, msg)
+	}
+	if e.Inner != nil {
+		msg += " " + e.Inner.Error()
+	}
+	return msg
+}
+
+func (e *Error) Unwrap() error {
+	return e.Inner
 }

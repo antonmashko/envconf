@@ -46,31 +46,39 @@ func (emptyField) structField() reflect.StructField {
 	return reflect.StructField{}
 }
 
-func createFieldFromValue(v reflect.Value, p *structType, t reflect.StructField) field {
+func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parser *EnvConf) field {
+	if v.Kind() == reflect.Pointer {
+		return newPtrType(v, p, t, parser)
+	}
 	// validate reflect value
 	if !v.CanInterface() {
 		return emptyField{}
 	}
+
+	// implementations check
+	implF := asImpl(v)
+	if implF != nil {
+		return newFieldType(v, p, t, parser.external, parser.PriorityOrder())
+	}
+
 	switch v.Kind() {
 	case reflect.Struct:
-		// implementations check
-		implF := asImpl(v)
-		if implF != nil {
-			return newFieldType(v, p, t)
-		}
-		return newStructType(v, p, t)
-	case reflect.Ptr:
-		return newPtrType(v, p, t)
+		return newStructType(v, p, t, parser)
 	case reflect.Interface:
-		if v.IsValid() && !v.IsZero() {
-			return createFieldFromValue(v.Elem(), p, t)
+		return newInterfaceType(v, p, t, parser)
+	case reflect.Array, reflect.Slice:
+		return &collectionSliceType{
+			collectionType: newCollectionType(v, p, t, parser),
 		}
-		return emptyField{}
+	case reflect.Map:
+		return &collectionMapType{
+			collectionType: newCollectionType(v, p, t, parser),
+		}
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types
 		return emptyField{}
 	default:
-		return newFieldType(v, p, t)
+		return newFieldType(v, p, t, parser.external, parser.PriorityOrder())
 	}
 }
 
