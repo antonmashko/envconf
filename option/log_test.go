@@ -53,7 +53,7 @@ func TestWithLog_PrintMessage_Ok(t *testing.T) {
 		Value:    "bar",
 	})
 
-	if p.message != `field="foo" value="bar" source="Environment"` {
+	if p.message != `field="foo" value="bar" type="string" source="Environment"` {
 		t.Fatal("unexpected result: ", p.message)
 	}
 }
@@ -72,7 +72,7 @@ func TestWithLog_PrintWithSecret_Ok(t *testing.T) {
 		Value:    "secret_password",
 	})
 
-	if p.message != `field="User.Password" value="******" source="Environment"` {
+	if p.message != `field="User.Password" value="******" type="string" source="Environment"` {
 		t.Fatal("unexpected result: ", p.message)
 	}
 }

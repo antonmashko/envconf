@@ -1,8 +1,10 @@
 package envconf_test
 
 import (
+	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/antonmashko/envconf"
@@ -46,6 +48,55 @@ func TestParse_Slice_Ok(t *testing.T) {
 	}
 }
 
+func TestParse_EmptyInterfaceSlice_Ok(t *testing.T) {
+	cfg := struct {
+		Slice []interface{}
+	}{}
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestParse_InterfaceSlice_Ok(t *testing.T) {
+	f1 := &struct {
+		Foo string `env:"TEST_PARSE_INTERFACE_SLICE_OK_FOO1"`
+	}{}
+	f2 := &struct {
+		Foo int `env:"TEST_PARSE_INTERFACE_SLICE_OK_FOO2"`
+	}{}
+	f3 := &struct {
+		Foo float64 `env:"TEST_PARSE_INTERFACE_SLICE_OK_FOO3"`
+	}{}
+	cfg := struct {
+		Field []interface{}
+	}{
+		Field: []interface{}{
+			f1,
+			f2,
+			[]interface{}{f3},
+		},
+	}
+	expectedF1 := "test"
+	expectedF2 := 432
+	expectedF3 := 43.2
+	os.Setenv("TEST_PARSE_INTERFACE_SLICE_OK_FOO1", expectedF1)
+	os.Setenv("TEST_PARSE_INTERFACE_SLICE_OK_FOO2", strconv.Itoa(expectedF2))
+	os.Setenv("TEST_PARSE_INTERFACE_SLICE_OK_FOO3", fmt.Sprint(expectedF3))
+
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if f1.Foo != expectedF1 {
+		t.Fatalf("incorrect result. expected[0]=%v actual[0]=%v", expectedF1, f1.Foo)
+	}
+	if f2.Foo != expectedF2 {
+		t.Fatalf("incorrect result. expected[1]=%v actual[1]=%v", expectedF2, f2.Foo)
+	}
+	if f3.Foo != expectedF3 {
+		t.Fatalf("incorrect result. expected[1]=%v actual[1]=%v", expectedF3, f3.Foo)
+	}
+}
+
 func TestParse_Slice_ErrInvalidElement(t *testing.T) {
 	cfg := struct {
 		Field []int `env:"TEST_PARSE_SLICE_ErrInvalidElement"`
@@ -67,6 +118,26 @@ func TestParse_Map_Ok(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cfg.Field, expectedResult) {
 		t.Fatalf("incorrect result. expected=%v actual=%v", expectedResult, cfg.Field)
+	}
+}
+
+func TestParse_MapX_Ok(t *testing.T) {
+	v1 := &struct {
+		Field1 int `default:"5"`
+	}{}
+	cfg := struct {
+		Field map[string]interface{}
+	}{
+		Field: map[string]interface{}{
+			"xyz": v1,
+		},
+	}
+
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if v1.Field1 != 5 {
+		t.Fatalf("incorrect result. expected=%v actual=%v", 5, v1.Field1)
 	}
 }
 

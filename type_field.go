@@ -106,11 +106,14 @@ func (t *fieldType) define() error {
 		return nil
 	}
 	v, p, err := t.readConfigValue()
-	if str, ok := v.(string); ok {
-		err = setFromString(t.v, str)
+	if str, ok := v.(string); ok && p != option.ExternalSource {
+		v, err = setFromString(t.v, str)
 	}
 
 	if err != nil {
+		if err == ErrConfigurationNotFound {
+			return err
+		}
 		return &Error{
 			Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
 			FieldName: fullname(t),
@@ -125,14 +128,15 @@ func (t *fieldType) define() error {
 	return nil
 }
 
-func setFromString(field reflect.Value, value string) error {
+func setFromString(field reflect.Value, value string) (interface{}, error) {
 	if implF := asImpl(field); implF != nil {
-		return implF([]byte(value))
+		res := []byte(value)
+		return res, implF(res)
 	}
 	oval := value
 	value = strings.Trim(value, " ")
 	if !field.CanSet() {
-		return errors.New("reflect: cannot set")
+		return nil, errors.New("reflect: cannot set")
 	}
 
 	// native complex types
@@ -140,48 +144,53 @@ func setFromString(field reflect.Value, value string) error {
 	case time.Duration:
 		d, err := time.ParseDuration(value)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		field.SetInt(d.Nanoseconds())
-		return nil
+		return d, nil
 	}
 
 	// primitives and collections
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(oval)
+		return oval, nil
 	case reflect.Bool:
 		i, err := strconv.ParseBool(value)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		field.SetBool(i)
+		return i, nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i, err := strconv.ParseInt(value, 0, field.Type().Bits())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		field.SetInt(i)
+		return i, nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		i, err := strconv.ParseUint(value, 0, field.Type().Bits())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		field.SetUint(i)
+		return i, nil
 	case reflect.Float32, reflect.Float64:
 		i, err := strconv.ParseFloat(value, field.Type().Bits())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		field.SetFloat(i)
+		return i, nil
 	case reflect.Complex64, reflect.Complex128:
 		i, err := strconv.ParseComplex(value, field.Type().Bits())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		field.SetComplex(i)
+		return i, nil
 	default:
-		return ErrUnsupportedType
+		return nil, ErrUnsupportedType
 	}
-	return nil
 }

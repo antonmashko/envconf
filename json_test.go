@@ -1,6 +1,7 @@
 package envconf_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/antonmashko/envconf"
@@ -294,5 +295,38 @@ func TestJsonConfig_SliceOfStructs_Ok(t *testing.T) {
 
 	if len(tc.Foo) < 1 || tc.Foo[0].Field1 != "bar1" {
 		t.Errorf("incorrect result: %#v", tc)
+	}
+}
+
+func TestJsonConfig_SliceOfStructsComplex_Ok(t *testing.T) {
+	json := `{
+		"foo": [{
+			"f1": "bar1",
+			"sl1": [
+				"test",
+				1,
+				42.2,
+				true
+			]
+		}]
+	}`
+	tc := struct {
+		Foo []struct {
+			Field1 string        `json:"f1"`
+			Sl     []interface{} `json:"sl1"`
+		}
+	}{}
+	jconf := envconf.Json([]byte(json))
+	if err := envconf.ParseWithExternal(&tc, jconf); err != nil {
+		t.Fatalf("failed to external parse. err=%s", err)
+	}
+
+	if len(tc.Foo) < 1 || tc.Foo[0].Field1 != "bar1" {
+		t.Fatalf("incorrect result: %#v", tc)
+	}
+
+	expectedSl := []interface{}{"test", float64(1), 42.2, true}
+	if !reflect.DeepEqual(expectedSl, tc.Foo[0].Sl) {
+		t.Fatalf("incorrect result. expected=%v actual=%v", expectedSl, tc.Foo[0].Sl)
 	}
 }
