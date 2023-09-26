@@ -106,18 +106,18 @@ func (t *fieldType) define() error {
 		return nil
 	}
 	v, p, err := t.readConfigValue()
-	if str, ok := v.(string); ok && p != option.ExternalSource {
-		v, err = setFromString(t.v, str)
+	if err != nil {
+		return err
 	}
 
-	if err != nil {
-		if err == ErrConfigurationNotFound {
-			return err
-		}
-		return &Error{
-			Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
-			FieldName: fullname(t),
-			Message:   "cannot set",
+	if str, ok := v.(string); ok && p != option.ExternalSource {
+		v, err = setFromString(t.v, str)
+		if err != nil {
+			return &Error{
+				Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
+				FieldName: fullname(t),
+				Message:   "cannot set",
+			}
 		}
 	}
 
@@ -130,8 +130,7 @@ func (t *fieldType) define() error {
 
 func setFromString(field reflect.Value, value string) (interface{}, error) {
 	if implF := asImpl(field); implF != nil {
-		res := []byte(value)
-		return res, implF(res)
+		return value, implF([]byte(value))
 	}
 	oval := value
 	value = strings.Trim(value, " ")
