@@ -53,6 +53,9 @@ func (f *ptrType) define() error {
 	}
 
 	if f.field.isSet() && f.tmp != nil {
+		if !f.tmp.CanSet() {
+			return nil
+		}
 		f.v.Set(*f.tmp)
 	}
 
