@@ -22,9 +22,20 @@ func NewWithExternal(e External) *EnvConf {
 	}
 }
 
+func (e *EnvConf) fieldType(f field) *fieldType {
+	switch ft := f.(type) {
+	case *fieldType:
+		return ft
+	case *ptrType:
+		return e.fieldType(ft.field)
+	default:
+		return nil
+	}
+}
+
 func (e *EnvConf) fieldInitialized(f field) {
-	pt, ok := f.(*fieldType)
-	if !ok {
+	pt := e.fieldType(f)
+	if pt == nil {
 		return
 	}
 	dv, _ := pt.def.Value()
@@ -41,8 +52,8 @@ func (e *EnvConf) fieldInitialized(f field) {
 }
 
 func (e *EnvConf) fieldDefined(f field) {
-	pt, ok := f.(*fieldType)
-	if !ok {
+	pt := e.fieldType(f)
+	if pt == nil {
 		return
 	}
 	if pt.definedValue == nil {
@@ -64,8 +75,8 @@ func (e *EnvConf) fieldDefined(f field) {
 }
 
 func (e *EnvConf) fieldNotDefined(f field, err error) {
-	pt, ok := f.(*fieldType)
-	if !ok {
+	pt := e.fieldType(f)
+	if pt == nil {
 		return
 	}
 	e.opts.OnFieldDefineErr(option.FieldDefineErrorArg{
