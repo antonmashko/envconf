@@ -19,7 +19,7 @@ func Test_setFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := setFromString(tt.args.field, tt.args.value); (err != nil) != tt.wantErr {
+			if _, err := setFromString(tt.args.field, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("setFromString() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

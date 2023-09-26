@@ -24,7 +24,7 @@ func (l *Logger) printDefined(arg FieldDefinedArg) {
 	if l.HideSecrets && regexp.MustCompile(l.SecretMatchRegex).MatchString(strings.ToLower(arg.Name)) {
 		v = "******"
 	}
-	l.Print("field=\"", arg.FullName, "\" value=\"", v,
+	l.Print("field=\"", arg.FullName, "\" value=\"", v, "\" type=\"", arg.Type.String(),
 		"\" source=\"", arg.Source.String(), "\"")
 }
 

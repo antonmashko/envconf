@@ -28,6 +28,8 @@ func (e *EnvConf) fieldType(f field) *fieldType {
 		return ft
 	case *ptrType:
 		return e.fieldType(ft.field)
+	case *interfaceType:
+		return e.fieldType(ft.fv)
 	default:
 		return nil
 	}
