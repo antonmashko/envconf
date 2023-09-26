@@ -383,3 +383,13 @@ func TestParse_PrivateField_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestParse_PrivateFieldPointer_Ok(t *testing.T) {
+	cfg := struct {
+		field2 *string `default:"f2"`
+	}{}
+
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
+	}
+}
