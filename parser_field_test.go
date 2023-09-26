@@ -305,6 +305,23 @@ func TestPrimitive_ParseURL_Ok(t *testing.T) {
 	}
 }
 
+func TestPrimitive_ParseConnURL_Ok(t *testing.T) {
+	data := struct {
+		ConnURL  *url.URL `env:"DB_CONN_URL"`
+		ConnURL2 url.URL  `env:"DB_CONN_URL"`
+	}{}
+	expected := "postgres://pqgotest:password@localhost/pqgotest?sslmode=verify-full"
+	os.Setenv("DB_CONN_URL", expected)
+	if err := envconf.Parse(&data); err != nil {
+		t.Fatal(err)
+	}
+
+	if expected != data.ConnURL.String() || expected != data.ConnURL2.String() {
+		t.Fatalf("incorrect value. expected=%v actual1=%v actual2=%v",
+			expected, data.ConnURL, data.ConnURL)
+	}
+}
+
 func TestPrimitive_ParseURL_ErrInvalidURL(t *testing.T) {
 	data := struct {
 		URL1 *url.URL `default:";test:test"`
