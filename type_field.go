@@ -21,9 +21,10 @@ type definedValue struct {
 }
 
 type fieldType struct {
-	v  reflect.Value
-	p  *structType
-	sf reflect.StructField
+	v          reflect.Value
+	p          field
+	sf         reflect.StructField
+	parseOrder []option.ConfigSource
 
 	flag     *flagSource          // flag value
 	env      *envSource           // env value
@@ -35,20 +36,21 @@ type fieldType struct {
 	definedValue *definedValue
 }
 
-func newFieldType(v reflect.Value, p *structType, sf reflect.StructField) *fieldType {
+func newFieldType(v reflect.Value, p field, sf reflect.StructField, ext *externalConfig, parseOrder []option.ConfigSource) *fieldType {
 	desc := sf.Tag.Get(tagDescription)
 	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
 	f := &fieldType{
-		p:        p,
-		v:        v,
-		sf:       sf,
-		def:      newDefaultValueSource(sf),
-		required: required,
-		desc:     desc,
+		v:          v,
+		p:          p,
+		sf:         sf,
+		parseOrder: parseOrder,
+		def:        newDefaultValueSource(sf),
+		required:   required,
+		desc:       desc,
 	}
 	f.flag = newFlagSource(f, sf, desc)
 	f.env = newEnvSource(f, sf)
-	f.ext = newExternalValueSource(f, p.parser.external)
+	f.ext = newExternalValueSource(f, ext)
 	return f
 }
 
@@ -76,10 +78,9 @@ func (t *fieldType) init() error {
 	return nil
 }
 
-func (t *fieldType) define() error {
+func (t *fieldType) readConfigValue() (interface{}, option.ConfigSource, error) {
 	// create correct parse priority
-	priority := t.p.parser.PriorityOrder()
-	for _, p := range priority {
+	for _, p := range t.parseOrder {
 		var vr valueExtractor
 		switch p {
 		case option.FlagVariable:
@@ -93,32 +94,35 @@ func (t *fieldType) define() error {
 		}
 
 		v, ok := vr.Value()
-		if !ok {
-			continue
+		if ok {
+			return v, p, nil
 		}
+	}
+	return nil, option.ConfigSource(-1), ErrConfigurationNotFound
+}
 
-		var err error
-		if str, ok := v.(string); ok {
-			err = setFromString(t.v, str)
-		}
-
-		if err != nil {
-			return &Error{
-				Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
-				FieldName: fullname(t),
-				Message:   "cannot set",
-			}
-		}
-
-		t.definedValue = &definedValue{
-			source: p,
-			value:  v,
-		}
-
+func (t *fieldType) define() error {
+	if t.definedValue != nil {
 		return nil
 	}
+	v, p, err := t.readConfigValue()
+	if str, ok := v.(string); ok {
+		err = setFromString(t.v, str)
+	}
 
-	return ErrConfigurationNotFound
+	if err != nil {
+		return &Error{
+			Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
+			FieldName: fullname(t),
+			Message:   "cannot set",
+		}
+	}
+
+	t.definedValue = &definedValue{
+		source: p,
+		value:  v,
+	}
+	return nil
 }
 
 func setFromString(field reflect.Value, value string) error {
@@ -176,49 +180,6 @@ func setFromString(field reflect.Value, value string) error {
 			return err
 		}
 		field.SetComplex(i)
-	case reflect.Array:
-		sl := strings.Split(value, ",")
-		for i := range sl {
-			err := setFromString(field.Index(i), sl[i])
-			if err != nil {
-				return err
-			}
-		}
-	case reflect.Slice:
-		sl := strings.Split(value, ",")
-		rsl := reflect.MakeSlice(field.Type(), len(sl), cap(sl))
-		for i := range sl {
-			err := setFromString(rsl.Index(i), sl[i])
-			if err != nil {
-				return err
-			}
-		}
-		field.Set(rsl)
-	case reflect.Map:
-		sl := strings.Split(value, ",")
-		rmp := reflect.MakeMap(field.Type())
-		ftype := field.Type()
-		key := ftype.Key()
-		elem := ftype.Elem()
-		for i := range sl {
-			idx := strings.IndexRune(sl[i], ':')
-			rvkey := reflect.New(key).Elem()
-			rvval := reflect.New(elem).Elem()
-			if idx == -1 {
-				if err := setFromString(rvkey, sl[i]); err != nil {
-					return err
-				}
-			} else {
-				if err := setFromString(rvkey, sl[i][:idx]); err != nil {
-					return err
-				}
-				if err := setFromString(rvval, sl[i][idx+1:]); err != nil {
-					return err
-				}
-			}
-			rmp.SetMapIndex(rvkey, rvval)
-		}
-		field.Set(rmp)
 	default:
 		return ErrUnsupportedType
 	}

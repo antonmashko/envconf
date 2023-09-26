@@ -17,7 +17,7 @@ func TestExternal_newExternalConfig_Ok(t *testing.T) {
 	if ext == nil {
 		t.Fail()
 	}
-	if ext.unmarshal(nil, nil) != nil {
+	if ext.unmarshal(nil) != nil {
 		t.Error("unexpected result")
 	}
 }
@@ -28,7 +28,7 @@ func TestExternal_InvalidJson_Err(t *testing.T) {
 	tc := struct {
 		Foo int
 	}{}
-	if ext.unmarshal(reflect.TypeOf(tc), &tc) == nil {
+	if ext.unmarshal(&tc) == nil {
 		t.Error("unexpected error got nil")
 	}
 }

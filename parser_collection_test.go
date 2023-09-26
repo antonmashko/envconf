@@ -27,11 +27,6 @@ func TestParse_Array_ErrOutOfRange(t *testing.T) {
 		Field [2]int `env:"TEST_PARSE_ARRAY_OK"`
 	}{}
 	os.Setenv("TEST_PARSE_ARRAY_OK", "-2, -1,0, 1 ,2 ")
-	defer func() {
-		if e := recover(); e == nil {
-			t.Fatal("expected error but got nil")
-		}
-	}()
 	if err := envconf.Parse(&cfg); err == nil {
 		t.Fatal("expected error but got nil")
 	}

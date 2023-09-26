@@ -7,7 +7,7 @@ import (
 
 type structType struct {
 	parser *EnvConf
-	p      *structType
+	p      field
 
 	sname string
 	v     reflect.Value
@@ -32,19 +32,14 @@ func newParentStructType(data interface{}, parser *EnvConf) (*structType, error)
 		return nil, errors.New("invalid type")
 	}
 
-	s := newStructType(v, nil, reflect.StructField{})
-	s.parser = parser
+	s := newStructType(v, nil, reflect.StructField{}, parser)
 	return s, nil
 }
 
-func newStructType(val reflect.Value, parent *structType, tag reflect.StructField) *structType {
-	var p *EnvConf
-	if parent != nil {
-		p = parent.parser
-	}
+func newStructType(val reflect.Value, parent field, tag reflect.StructField, parser *EnvConf) *structType {
 	sname := tag.Tag.Get("envconf")
 	return &structType{
-		parser: p,
+		parser: parser,
 		sname:  sname,
 		p:      parent,
 		v:      val,
@@ -76,7 +71,7 @@ func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
 		rfield := s.v.Field(i)
-		f := createFieldFromValue(rfield, s, s.t.Field(i))
+		f := createFieldFromValue(rfield, s, s.t.Field(i), s.parser)
 		if err := f.init(); err != nil {
 			return err
 		}
@@ -90,6 +85,10 @@ func (s *structType) define() error {
 	for _, f := range s.fields {
 		err := f.define()
 		if err != nil {
+			s.parser.fieldNotDefined(f, err)
+			if !errors.Is(err, ErrConfigurationNotFound) {
+				return err
+			}
 			if rf, ok := f.(requiredField); ok && rf.IsRequired() {
 				return &Error{
 					Message:   "failed to define field",
@@ -97,13 +96,8 @@ func (s *structType) define() error {
 					FieldName: fullname(f),
 				}
 			}
-
-			s.parser.fieldNotDefined(f, err)
-			if err == ErrConfigurationNotFound {
-				continue
-			}
-			return err
 		}
+
 		if f.isSet() {
 			s.hasValue = true
 			s.parser.fieldDefined(f)
