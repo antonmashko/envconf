@@ -1,9 +1,11 @@
 package envconf
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type interfaceType struct {
-	fv     field // underline type
+	field  // underline type
 	v      reflect.Value
 	p      field
 	sf     reflect.StructField
@@ -12,7 +14,7 @@ type interfaceType struct {
 
 func newInterfaceType(v reflect.Value, p field, sf reflect.StructField, parser *EnvConf) *interfaceType {
 	return &interfaceType{
-		fv:     emptyField{},
+		field:  emptyField{},
 		v:      v,
 		p:      p,
 		sf:     sf,
@@ -28,22 +30,14 @@ func (t *interfaceType) parent() field {
 	return t.p
 }
 
-func (t *interfaceType) init() error {
-	return t.fv.init()
-}
-
 func (t *interfaceType) define() error {
 	if t.v.IsValid() && !t.v.IsZero() {
-		t.fv = createFieldFromValue(t.v.Elem(), t.p, t.sf, t.parser)
-		if err := t.fv.init(); err != nil {
+		t.field = createFieldFromValue(t.v.Elem(), t.p, t.sf, t.parser)
+		if err := t.field.init(); err != nil {
 			return err
 		}
 	}
-	return t.fv.define()
-}
-
-func (t *interfaceType) isSet() bool {
-	return t.fv.isSet()
+	return t.field.define()
 }
 
 func (t *interfaceType) structField() reflect.StructField {

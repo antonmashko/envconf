@@ -7,19 +7,26 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/antonmashko/envconf/external"
 	"github.com/antonmashko/envconf/option"
 )
 
 type collectionType struct {
 	*fieldType
 	parser *EnvConf
+	ext    external.ExternalSource
 }
 
 func newCollectionType(v reflect.Value, p field, sf reflect.StructField, parser *EnvConf) *collectionType {
 	return &collectionType{
-		fieldType: newFieldType(v, p, sf, parser.external, parser.PriorityOrder()),
+		fieldType: newFieldType(v, p, sf, parser.PriorityOrder()),
 		parser:    parser,
+		ext:       external.NilContainer{},
 	}
+}
+
+func (c *collectionType) externalSource() external.ExternalSource {
+	return c.ext
 }
 
 func (c *collectionType) onDefine(v reflect.Value, p field, sf reflect.StructField, value interface{}, cs option.ConfigSource) error {
@@ -72,7 +79,10 @@ func (t *collectionSliceType) createFromString(value string, cs option.ConfigSou
 }
 
 func (t *collectionSliceType) define() error {
-	v, p, err := t.readConfigValue()
+	if t.p != nil {
+		t.ext = external.AsExternalSource(t.sf.Name, t.p.externalSource())
+	}
+	v, p, err := t.readValue()
 	if err == nil {
 		// value specified for entire collection
 		value, ok := v.(string)
@@ -150,7 +160,10 @@ func (t *collectionMapType) createFromString(value string, p option.ConfigSource
 }
 
 func (t *collectionMapType) define() error {
-	v, p, err := t.readConfigValue()
+	if t.p != nil {
+		t.ext = external.AsExternalSource(t.sf.Name, t.p.externalSource())
+	}
+	v, p, err := t.readValue()
 	if err == nil {
 		// value specified for entire collection
 		value, ok := v.(string)

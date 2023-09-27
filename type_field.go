@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/antonmashko/envconf/external"
 	"github.com/antonmashko/envconf/option"
 )
 
@@ -36,7 +37,7 @@ type fieldType struct {
 	definedValue *definedValue
 }
 
-func newFieldType(v reflect.Value, p field, sf reflect.StructField, ext *externalConfig, parseOrder []option.ConfigSource) *fieldType {
+func newFieldType(v reflect.Value, p field, sf reflect.StructField, parseOrder []option.ConfigSource) *fieldType {
 	desc := sf.Tag.Get(tagDescription)
 	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
 	f := &fieldType{
@@ -50,7 +51,7 @@ func newFieldType(v reflect.Value, p field, sf reflect.StructField, ext *externa
 	}
 	f.flag = newFlagSource(f, sf, desc)
 	f.env = newEnvSource(f, sf)
-	f.ext = newExternalValueSource(f, ext)
+	f.ext = newExternalValueSource(f)
 	return f
 }
 
@@ -74,11 +75,15 @@ func (t *fieldType) IsRequired() bool {
 	return t.required
 }
 
+func (t *fieldType) externalSource() external.ExternalSource {
+	return external.NilContainer{}
+}
+
 func (t *fieldType) init() error {
 	return nil
 }
 
-func (t *fieldType) readConfigValue() (interface{}, option.ConfigSource, error) {
+func (t *fieldType) readValue() (interface{}, option.ConfigSource, error) {
 	// create correct parse priority
 	for _, p := range t.parseOrder {
 		var vr valueExtractor
@@ -105,7 +110,7 @@ func (t *fieldType) define() error {
 	if t.definedValue != nil {
 		return nil
 	}
-	v, p, err := t.readConfigValue()
+	v, p, err := t.readValue()
 	if err != nil {
 		return err
 	}

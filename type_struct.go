@@ -3,6 +3,8 @@ package envconf
 import (
 	"errors"
 	"reflect"
+
+	"github.com/antonmashko/envconf/external"
 )
 
 type structType struct {
@@ -13,6 +15,7 @@ type structType struct {
 	v     reflect.Value
 	t     reflect.Type
 	tag   reflect.StructField
+	ext   external.ExternalSource
 
 	hasValue bool
 	fields   []field
@@ -45,6 +48,7 @@ func newStructType(val reflect.Value, parent field, tag reflect.StructField, par
 		v:      val,
 		t:      val.Type(),
 		tag:    tag,
+		ext:    external.NilContainer{},
 		fields: make([]field, val.NumField()),
 	}
 }
@@ -67,6 +71,14 @@ func (s *structType) structField() reflect.StructField {
 	return s.tag
 }
 
+func (s *structType) isSet() bool {
+	return s.hasValue
+}
+
+func (s *structType) externalSource() external.ExternalSource {
+	return s.ext
+}
+
 func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
 	for i := 0; i < s.v.NumField(); i++ {
@@ -82,6 +94,9 @@ func (s *structType) init() error {
 }
 
 func (s *structType) define() error {
+	if s.p != nil {
+		s.ext = external.AsExternalSource(s.tag.Name, s.p.externalSource())
+	}
 	for _, f := range s.fields {
 		err := f.define()
 		if err != nil {
@@ -104,8 +119,4 @@ func (s *structType) define() error {
 		}
 	}
 	return nil
-}
-
-func (s *structType) isSet() bool {
-	return s.hasValue
 }

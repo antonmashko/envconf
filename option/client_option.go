@@ -1,6 +1,10 @@
 package option
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/antonmashko/envconf/external"
+)
 
 type FieldInitializedArg struct {
 	Name        string
@@ -41,12 +45,17 @@ type ClientOption interface {
 }
 
 type Options struct {
+	external           external.External
 	priorityOrder      []ConfigSource
 	flagParsed         func() error
 	usage              func()
 	onFieldInitialized func(FieldInitializedArg)
 	onFieldDefined     func(FieldDefinedArg)
 	onFieldDefineErr   func(FieldDefineErrorArg)
+}
+
+func (o *Options) External() external.External {
+	return o.external
 }
 
 func (o *Options) PriorityOrder() []ConfigSource {

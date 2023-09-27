@@ -96,19 +96,21 @@ func (s *envSource) Value() (interface{}, bool) {
 }
 
 type externalValueSource struct {
-	f   field
-	ext *externalConfig
+	f field
 }
 
-func newExternalValueSource(f field, ext *externalConfig) *externalValueSource {
+func newExternalValueSource(f field) *externalValueSource {
 	return &externalValueSource{
-		f:   f,
-		ext: ext,
+		f: f,
 	}
 }
 
 func (s *externalValueSource) Value() (interface{}, bool) {
-	return s.ext.get(s.f)
+	if s.f.parent() == nil {
+		return nil, false
+	}
+	es := s.f.parent().externalSource()
+	return es.Read(s.f.structField().Name)
 }
 
 type defaultValueSource struct {
