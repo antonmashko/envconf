@@ -19,7 +19,7 @@ type collectionType struct {
 
 func newCollectionType(v reflect.Value, p field, sf reflect.StructField, parser *EnvConf) *collectionType {
 	return &collectionType{
-		fieldType: newFieldType(v, p, sf, parser.PriorityOrder()),
+		fieldType: newFieldType(v, p, sf, parser.PriorityOrder(), parser.opts.AllowExternalEnvInjection),
 		parser:    parser,
 		ext:       external.NilContainer{},
 	}

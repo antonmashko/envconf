@@ -65,7 +65,7 @@ func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parse
 	// implementations check
 	implF := asImpl(v)
 	if implF != nil {
-		return newFieldType(v, p, t, parser.PriorityOrder())
+		return newFieldType(v, p, t, parser.PriorityOrder(), parser.opts.AllowExternalEnvInjection)
 	}
 
 	switch v.Kind() {
@@ -85,7 +85,7 @@ func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parse
 		// unsupported types
 		return emptyField{}
 	default:
-		return newFieldType(v, p, t, parser.PriorityOrder())
+		return newFieldType(v, p, t, parser.PriorityOrder(), parser.opts.AllowExternalEnvInjection)
 	}
 }
 
