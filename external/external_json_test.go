@@ -1,6 +1,7 @@
 package external_test
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -311,5 +312,32 @@ func TestJsonConfig_SliceOfStructsComplex_Ok(t *testing.T) {
 	expectedSl := []interface{}{"test", float64(1), 42.2, true}
 	if !reflect.DeepEqual(expectedSl, tc.Foo[0].Sl) {
 		t.Fatalf("incorrect result. expected=%v actual=%v", expectedSl, tc.Foo[0].Sl)
+	}
+}
+
+func TestJsonConfig_EnvVarInjection_Ok(t *testing.T) {
+	json := `{
+		"foo": {
+			"bar": "${.env.JSON_TEST_ENVVAR_INJECTION}"
+		}
+	}`
+	tc := struct {
+		Foo struct {
+			Bar string `json:"bar"`
+		}
+	}{}
+
+	expectedValue := "foo_bar"
+	os.Setenv("JSON_TEST_ENVVAR_INJECTION", expectedValue)
+	err := envconf.Parse(&tc,
+		option.WithExternal(jsonconf.Json([]byte(json))),
+		option.WithExternalEnvInjection(true),
+	)
+	if err != nil {
+		t.Fatalf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo.Bar != expectedValue {
+		t.Fatalf("incorrect result. expected=%s actual=%s", expectedValue, tc.Foo.Bar)
 	}
 }

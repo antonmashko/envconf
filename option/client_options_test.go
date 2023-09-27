@@ -36,3 +36,15 @@ func TestOptions_DefaultPriorityOrder_Ok(t *testing.T) {
 		t.Fatal("unexpected result:", opts.PriorityOrder())
 	}
 }
+
+func TestWithExternalEnvInjection_Ok(t *testing.T) {
+	opts := &Options{}
+	WithExternalEnvInjection(true).Apply(opts)
+	if !opts.AllowExternalEnvInjection {
+		t.Fatal("got false")
+	}
+	WithExternalEnvInjection(false).Apply(opts)
+	if opts.AllowExternalEnvInjection {
+		t.Fatal("got true")
+	}
+}

@@ -12,10 +12,6 @@ import (
 	"github.com/antonmashko/envconf/option"
 )
 
-type valueExtractor interface {
-	Value() (interface{}, bool)
-}
-
 type definedValue struct {
 	source option.ConfigSource
 	value  interface{}
@@ -37,7 +33,7 @@ type fieldType struct {
 	definedValue *definedValue
 }
 
-func newFieldType(v reflect.Value, p field, sf reflect.StructField, parseOrder []option.ConfigSource) *fieldType {
+func newFieldType(v reflect.Value, p field, sf reflect.StructField, parseOrder []option.ConfigSource, allowEnvInjection bool) *fieldType {
 	desc := sf.Tag.Get(tagDescription)
 	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
 	f := &fieldType{
@@ -51,7 +47,7 @@ func newFieldType(v reflect.Value, p field, sf reflect.StructField, parseOrder [
 	}
 	f.flag = newFlagSource(f, sf, desc)
 	f.env = newEnvSource(f, sf)
-	f.ext = newExternalValueSource(f)
+	f.ext = newExternalValueSource(f, allowEnvInjection)
 	return f
 }
 
@@ -86,19 +82,18 @@ func (t *fieldType) init() error {
 func (t *fieldType) readValue() (interface{}, option.ConfigSource, error) {
 	// create correct parse priority
 	for _, p := range t.parseOrder {
-		var vr valueExtractor
+		var v interface{}
+		var ok bool
 		switch p {
 		case option.FlagVariable:
-			vr = t.flag
+			v, ok = t.flag.Value()
 		case option.EnvVariable:
-			vr = t.env
+			v, ok = t.env.Value()
 		case option.ExternalSource:
-			vr = t.ext
+			v, p, ok = t.ext.Value()
 		case option.DefaultValue:
-			vr = t.def
+			v, ok = t.def.Value()
 		}
-
-		v, ok := vr.Value()
 		if ok {
 			return v, p, nil
 		}

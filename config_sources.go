@@ -5,6 +5,8 @@ import (
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/antonmashko/envconf/option"
 )
 
 const (
@@ -84,6 +86,29 @@ func newEnvSource(f field, tag reflect.StructField) *envSource {
 	}
 }
 
+func newEnvInjection(value string) *envSource {
+	var ok bool
+	const prefix = "${"
+	value, ok = strings.CutPrefix(value, prefix)
+	if !ok {
+		return nil
+	}
+
+	const suffix = "}"
+	value, ok = strings.CutSuffix(value, suffix)
+	if !ok {
+		return nil
+	}
+
+	value = strings.TrimSpace(value)
+	const envInjectionPrefix = ".env."
+	value, ok = strings.CutPrefix(value, envInjectionPrefix)
+	if !ok {
+		return nil
+	}
+	return &envSource{name: value}
+}
+
 func (s *envSource) Name() string {
 	return s.name
 }
@@ -96,21 +121,43 @@ func (s *envSource) Value() (interface{}, bool) {
 }
 
 type externalValueSource struct {
-	f field
+	f                 field
+	allowEnvInjection bool
 }
 
-func newExternalValueSource(f field) *externalValueSource {
+func newExternalValueSource(f field, allowEnvInjection bool) *externalValueSource {
 	return &externalValueSource{
-		f: f,
+		f:                 f,
+		allowEnvInjection: allowEnvInjection,
 	}
 }
 
-func (s *externalValueSource) Value() (interface{}, bool) {
+func (s *externalValueSource) Value() (interface{}, option.ConfigSource, bool) {
 	if s.f.parent() == nil {
-		return nil, false
+		return nil, option.ExternalSource, false
 	}
 	es := s.f.parent().externalSource()
-	return es.Read(s.f.structField().Name)
+	v, ok := es.Read(s.f.structField().Name)
+	if !ok {
+		return nil, option.ExternalSource, false
+	}
+	if !s.allowEnvInjection {
+		return v, option.ExternalSource, true
+	}
+	str, ok := v.(string)
+	if !ok {
+		return v, option.ExternalSource, true
+	}
+	envInj := newEnvInjection(str)
+	if envInj == nil {
+		return v, option.ExternalSource, true
+	}
+	var ev interface{}
+	ev, ok = envInj.Value()
+	if !ok {
+		return v, option.ExternalSource, true
+	}
+	return ev, option.EnvVariable, true
 }
 
 type defaultValueSource struct {
