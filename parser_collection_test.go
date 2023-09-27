@@ -147,8 +147,11 @@ func TestParse_Map_ErrUnsupportedType(t *testing.T) {
 			Field map[int]interface{} `env:"TEST_PARSE_MAP_OK_ErrUnsupportedType"`
 		}{}
 		os.Setenv("TEST_PARSE_MAP_OK_ErrUnsupportedType", "1:1")
-		if err := envconf.Parse(&cfg); err == nil {
-			t.Fatal("expected error but got nil")
+		if err := envconf.Parse(&cfg); err != nil {
+			t.Fatal("expected nil but got error")
+		}
+		if v, ok := cfg.Field[1]; !ok || v != nil {
+			t.Fatalf("unexpected result: %v", cfg.Field)
 		}
 	})
 

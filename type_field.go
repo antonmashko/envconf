@@ -128,6 +128,28 @@ func (t *fieldType) define() error {
 	return nil
 }
 
+func (t *fieldType) defineFromValue(v interface{}, p option.ConfigSource) error {
+	str, ok := v.(string)
+	if ok {
+		var err error
+		v, err = setFromString(t.v, str)
+		if err != nil {
+			return &Error{
+				Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
+				FieldName: fullname(t),
+				Message:   "cannot set",
+			}
+		}
+	}
+
+	t.definedValue = &definedValue{
+		source: p,
+		value:  v,
+	}
+
+	return nil
+}
+
 func setFromString(field reflect.Value, value string) (interface{}, error) {
 	if implF := asImpl(field); implF != nil {
 		return value, implF([]byte(value))
