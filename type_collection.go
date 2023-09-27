@@ -29,21 +29,24 @@ func (c *collectionType) externalSource() external.ExternalSource {
 	return c.ext
 }
 
-func (c *collectionType) onDefine(v reflect.Value, p field, sf reflect.StructField, value interface{}, cs option.ConfigSource) error {
+func (c *collectionType) defineItem(v reflect.Value, p field, sf reflect.StructField, value interface{}, cs option.ConfigSource) error {
 	f := createFieldFromValue(v, p, sf, c.parser)
-	if ft, ok := f.(*fieldType); ok {
-		ft.definedValue = &definedValue{
-			source: cs,
-			value:  value,
-		}
-	}
 	if err := f.init(); err != nil {
 		return err
 	}
 	c.parser.fieldInitialized(f)
 	if err := f.define(); err != nil {
-		c.parser.fieldNotDefined(f, err)
-		return err
+		ft := asFieldType(f)
+		if ft != nil && err == ErrConfigurationNotFound {
+			err = ft.defineFromValue(value, cs)
+			if err != nil {
+				c.parser.fieldNotDefined(f, err)
+				return err
+			}
+		} else {
+			c.parser.fieldNotDefined(f, err)
+			return err
+		}
 	}
 	c.parser.fieldDefined(f)
 	return nil
@@ -66,11 +69,7 @@ func (t *collectionSliceType) createFromString(value string, cs option.ConfigSou
 
 	for i := 0; i < t.v.Len(); i++ {
 		rv := t.v.Index(i)
-		v, err := setFromString(rv, sl[i])
-		if err != nil {
-			return nil, err
-		}
-		err = t.onDefine(rv, t, reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()}, v, cs)
+		err := t.defineItem(rv, t, reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()}, sl[i], cs)
 		if err != nil {
 			return nil, err
 		}
@@ -103,10 +102,7 @@ func (t *collectionSliceType) define() error {
 
 	for i := 0; i < t.v.Len(); i++ {
 		rv := t.v.Index(i)
-		if !rv.CanInterface() {
-			continue
-		}
-		err = t.onDefine(rv, t, reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()},
+		err = t.defineItem(rv, t, reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()},
 			rv.Interface(), p)
 		if err != nil {
 			return err
@@ -135,25 +131,22 @@ func (t *collectionMapType) createFromString(value string, p option.ConfigSource
 		idx := strings.IndexRune(sl[i], ':')
 		rvkey := reflect.New(key).Elem()
 		rvval := reflect.New(elem).Elem()
-		var key, value interface{}
+		var key, value string
 		var err error
 		if idx == -1 {
-			if key, err = setFromString(rvkey, sl[i]); err != nil {
-				return nil, err
-			}
+			key = sl[i]
 		} else {
-			if key, err = setFromString(rvkey, sl[i][:idx]); err != nil {
-				return nil, err
-			}
-			if value, err = setFromString(rvval, sl[i][idx+1:]); err != nil {
-				return nil, err
-			}
+			key = sl[i][:idx]
+			value = sl[i][idx+1:]
 		}
-		rmp.SetMapIndex(rvkey, rvval)
-		err = t.onDefine(rvval, t, reflect.StructField{Name: fmt.Sprint(key), Type: rvkey.Type()}, value, p)
+		if _, err := setFromString(rvkey, key); err != nil {
+			return nil, err
+		}
+		err = t.defineItem(rvval, t, reflect.StructField{Name: fmt.Sprint(key), Type: rvkey.Type()}, value, p)
 		if err != nil {
 			return nil, err
 		}
+		rmp.SetMapIndex(rvkey, rvval)
 	}
 	t.v.Set(rmp)
 	return sl, nil
@@ -195,7 +188,7 @@ func (t *collectionMapType) define() error {
 			iv = rval.Interface()
 		}
 
-		err = t.onDefine(rval, t, reflect.StructField{Name: fmt.Sprint(rkey.Interface()), Type: rval.Type()},
+		err = t.defineItem(rval, t, reflect.StructField{Name: fmt.Sprint(rkey.Interface()), Type: rval.Type()},
 			iv, p)
 		if err != nil {
 			return err

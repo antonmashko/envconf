@@ -135,3 +135,16 @@ func asImpl(field reflect.Value) func([]byte) error {
 	}
 	return nil
 }
+
+func asFieldType(f field) *fieldType {
+	switch ft := f.(type) {
+	case *fieldType:
+		return ft
+	case *ptrType:
+		return asFieldType(ft.field)
+	case *interfaceType:
+		return asFieldType(ft.field)
+	default:
+		return nil
+	}
+}
