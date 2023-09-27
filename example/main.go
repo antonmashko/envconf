@@ -6,6 +6,7 @@ import (
 
 	"github.com/antonmashko/envconf"
 	"github.com/antonmashko/envconf/external"
+	"github.com/antonmashko/envconf/external/json"
 	"github.com/antonmashko/envconf/option"
 )
 
@@ -25,12 +26,11 @@ type Example struct {
 // Run `go run main.go --help` for getting help output with auto-generated names
 func main() {
 	var cfg Example
-	jsonConf := &envconf.Json{}
-	err := envconf.ParseWithExternal(&cfg, jsonConf,
+	err := envconf.Parse(&cfg,
+		option.WithExternal(&json.Json{}),
 		option.WithLog(log.Default()),
-		external.WithFlagConfigFile("config", "./conf.json", "", func(b []byte) error {
-			*jsonConf = envconf.Json(b)
-			return nil
+		option.WithFlagConfigFile("config", "./conf.json", "", func(b []byte) (external.External, error) {
+			return json.Json(b), nil
 		}),
 	)
 	if err != nil {

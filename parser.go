@@ -3,22 +3,17 @@ package envconf
 import (
 	"flag"
 
+	"github.com/antonmashko/envconf/external"
 	"github.com/antonmashko/envconf/option"
 )
 
 type EnvConf struct {
-	external *externalConfig
-	opts     *option.Options
+	opts *option.Options
 }
 
 func New() *EnvConf {
-	return NewWithExternal(emptyExt{})
-}
-
-func NewWithExternal(e External) *EnvConf {
 	return &EnvConf{
-		external: newExternalConfig(e),
-		opts:     &option.Options{},
+		opts: &option.Options{},
 	}
 }
 
@@ -29,7 +24,7 @@ func (e *EnvConf) fieldType(f field) *fieldType {
 	case *ptrType:
 		return e.fieldType(ft.field)
 	case *interfaceType:
-		return e.fieldType(ft.fv)
+		return e.fieldType(ft.field)
 	default:
 		return nil
 	}
@@ -99,6 +94,8 @@ func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 	for i := range opts {
 		opts[i].Apply(e.opts)
 	}
+
+	extMapper := external.NewExternalConfigMapper(e.opts.External())
 	p, err := newParentStructType(data, e)
 	if err != nil {
 		return err
@@ -115,9 +112,10 @@ func (e *EnvConf) Parse(data interface{}, opts ...option.ClientOption) error {
 			return err
 		}
 	}
-	if err = e.external.unmarshal(data); err != nil {
+	if err = extMapper.Unmarshal(data); err != nil {
 		return err
 	}
+	p.ext = extMapper.Data()
 	return p.define()
 }
 
@@ -130,10 +128,4 @@ func (e *EnvConf) PriorityOrder() []option.ConfigSource {
 // such as flag/environment variable or default value
 func Parse(data interface{}, opts ...option.ClientOption) error {
 	return New().Parse(data, opts...)
-}
-
-// ParseWithExternal works same as Parse method but also can be used external sources
-// (config files, key-value storages, etc.).
-func ParseWithExternal(data interface{}, external External, opts ...option.ClientOption) error {
-	return NewWithExternal(external).Parse(data, opts...)
 }

@@ -3,6 +3,8 @@ package envconf
 import (
 	"encoding"
 	"reflect"
+
+	"github.com/antonmashko/envconf/external"
 )
 
 const fieldNameDelim = "."
@@ -14,6 +16,7 @@ type field interface {
 	define() error
 	isSet() bool
 	structField() reflect.StructField
+	externalSource() external.ExternalSource
 }
 
 type requiredField interface {
@@ -46,6 +49,10 @@ func (emptyField) structField() reflect.StructField {
 	return reflect.StructField{}
 }
 
+func (emptyField) externalSource() external.ExternalSource {
+	return external.NilContainer{}
+}
+
 func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parser *EnvConf) field {
 	if v.Kind() == reflect.Pointer {
 		return newPtrType(v, p, t, parser)
@@ -58,7 +65,7 @@ func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parse
 	// implementations check
 	implF := asImpl(v)
 	if implF != nil {
-		return newFieldType(v, p, t, parser.external, parser.PriorityOrder())
+		return newFieldType(v, p, t, parser.PriorityOrder())
 	}
 
 	switch v.Kind() {
@@ -78,7 +85,7 @@ func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parse
 		// unsupported types
 		return emptyField{}
 	default:
-		return newFieldType(v, p, t, parser.external, parser.PriorityOrder())
+		return newFieldType(v, p, t, parser.PriorityOrder())
 	}
 }
 

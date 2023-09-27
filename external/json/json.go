@@ -1,4 +1,4 @@
-package envconf
+package json
 
 import (
 	"encoding/json"

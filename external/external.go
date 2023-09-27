@@ -1,21 +1,13 @@
 package external
 
-import (
-	"flag"
-	"fmt"
-	"os"
-
-	"github.com/antonmashko/envconf/option"
-)
-
-// WithFlagConfigFile wraps option.WithFlagParsed with reading configuration file from flag defined path
-func WithFlagConfigFile(flagName string, flagValue string, flagDescription string, initConf func([]byte) error) option.ClientOption {
-	cfg := flag.String(flagName, flagValue, flagDescription)
-	return option.WithFlagParsed(func() error {
-		b, err := os.ReadFile(*cfg)
-		if err != nil {
-			return fmt.Errorf("os.ReadFile: %w", err)
-		}
-		return initConf(b)
-	})
+// External config source
+// Implementation of this interface should be able to `Unmarshal` data into map[string]interface{},
+// where interface{} should be also same map type for the nested structures
+type External interface {
+	// TagName is key name in golang struct tag (json, yaml, toml etc.).
+	TagName() []string
+	// Unmarshal parses the external data and stores the result
+	// in the value pointed to by v.
+	// Usually, it just wraps the existing `Unmarshal` function of third-party libraries
+	Unmarshal(v interface{}) error
 }
