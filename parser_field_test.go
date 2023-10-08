@@ -417,8 +417,9 @@ func TestParse_EmptyInterface_Ok(t *testing.T) {
 		Field2 struct {
 			Field21 interface{} `default:"field21"`
 		}
-		Field3 []interface{} `default:"1,2"`
-		Field4 *interface{}  `default:"field4"`
+		Field3 []interface{}          `default:"1,2"`
+		Field4 *interface{}           `default:"field4"`
+		Field5 map[string]interface{} `default:"test1:1,test2:2"`
 	}{}
 	if err := envconf.Parse(&ts); err != nil {
 		t.Fatal("envconf.Parse: ", err)
@@ -440,5 +441,11 @@ func TestParse_EmptyInterface_Ok(t *testing.T) {
 	}
 	if str, _ := (*ts.Field4).(string); str != "field4" {
 		Fatal(t, "field4", ts.Field4, "ts.Field4")
+	}
+	if str, _ := ts.Field5["test1"].(string); str != "1" {
+		Fatal(t, "1", ts.Field5["test1"], "ts.Field5[\"test1\"]")
+	}
+	if str, _ := ts.Field5["test2"].(string); str != "2" {
+		Fatal(t, "2", ts.Field5["test2"], "ts.Field5[\"test2\"]")
 	}
 }
