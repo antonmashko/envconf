@@ -18,7 +18,7 @@ Usually you need a tag with desire configuration sources and execution of a sing
 * command line flags
 * environment variables
 * default values
-* external sources (can be anything that is implementing interface [External](https://pkg.go.dev/github.com/antonmashko/envconf#External))
+* external sources (can be anything that is implementing interface [External](https://pkg.go.dev/github.com/antonmashko/envconf/external#External))
 
 ### Tags
 Use tags for getting values from different configuration sources.
