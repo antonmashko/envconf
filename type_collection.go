@@ -93,6 +93,11 @@ func newSliceType(v reflect.Value, f *configField) *sliceType {
 }
 
 func (s *sliceType) fromString(value string, cs option.ConfigSource) (interface{}, error) {
+	if s.v.Type().Elem().Kind() == reflect.Uint8 {
+		// bytes
+		s.v.SetBytes([]byte(value))
+		return value, nil
+	}
 	sl := strings.Split(value, ",")
 	switch s.v.Kind() {
 	case reflect.Array:

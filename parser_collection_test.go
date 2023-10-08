@@ -107,6 +107,19 @@ func TestParse_Slice_ErrInvalidElement(t *testing.T) {
 	}
 }
 
+func TestParse_StringByteSlice_Ok(t *testing.T) {
+	cfg := struct {
+		Field []byte `default:"abc"`
+	}{}
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal("envconf.Parse: ", err)
+	}
+	const expected = "abc"
+	if string(cfg.Field) != expected {
+		Fatal(t, expected, string(cfg.Field), "cfg.Field")
+	}
+}
+
 func TestParse_Map_Ok(t *testing.T) {
 	cfg := struct {
 		Field map[int]string `env:"TEST_PARSE_MAP_OK"`
@@ -143,31 +156,22 @@ func TestParse_MapValueInterfaceDefinedValue_Ok(t *testing.T) {
 
 func TestParse_MapValueInterface_Ok(t *testing.T) {
 	cfg := struct {
-		Field map[string]interface{} `default:"1:test,2:test2"`
+		Field1 map[string]interface{} `default:"test1:1,test2:2"`
+		Field2 map[int64]interface{}  `default:"1:test1,2:test2"`
 	}{}
 
 	if err := envconf.Parse(&cfg); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Field["1"] != "test" {
-		t.Fatalf("incorrect result. expected=%v actual=%v", "test", cfg.Field["1"])
+	if cfg.Field1["test1"] != "1" || cfg.Field1["test2"] != "2" {
+		t.Fatalf("incorrect result map[string]interface{}. actual=%#v", cfg.Field1)
+	}
+	if cfg.Field2[1] != "test1" || cfg.Field2[2] != "test2" {
+		t.Fatalf("incorrect result map[string]interface{}. actual=%#v", cfg.Field2)
 	}
 }
 
 func TestParse_Map_ErrUnsupportedType(t *testing.T) {
-	t.Run("InvalidValue", func(t *testing.T) {
-		cfg := struct {
-			Field map[int]interface{} `env:"TEST_PARSE_MAP_OK_ErrUnsupportedType"`
-		}{}
-		os.Setenv("TEST_PARSE_MAP_OK_ErrUnsupportedType", "1:1")
-		if err := envconf.Parse(&cfg); err != nil {
-			t.Fatal("expected nil but got error: ", err)
-		}
-		if v, ok := cfg.Field[1]; !ok || v != "1" {
-			t.Fatalf("unexpected result: %#v", cfg.Field)
-		}
-	})
-
 	t.Run("InvalidKey", func(t *testing.T) {
 		cfg := struct {
 			Field map[struct{ k interface{} }]interface{} `env:"TEST_PARSE_MAP_OK_ErrUnsupportedType"`
