@@ -3,7 +3,8 @@ package option
 type ConfigSource int
 
 const (
-	FlagVariable ConfigSource = iota
+	NoConfigValue ConfigSource = -1
+	FlagVariable  ConfigSource = 1 << (iota - 1)
 	EnvVariable
 	ExternalSource
 	DefaultValue

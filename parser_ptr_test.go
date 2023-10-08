@@ -105,12 +105,12 @@ func TestStructPoint_FewInnerOneWithValue_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 	if data.Inner1 != nil {
-		t.Fatalf("incorrect value. expected=nil actual=%v", data.Inner1)
+		t.Fatalf("incorrect value Inner1. expected=nil actual=%v", data.Inner1)
 	}
 	if data.Inner2.Inner21 != nil {
-		t.Fatalf("incorrect value. expected=nil actual=%v", data.Inner2.Inner21)
+		t.Fatalf("incorrect value Inner2. expected=nil actual=%v", data.Inner2.Inner21)
 	}
 	if data.Inner3 == nil || data.Inner3.Inner31 == nil || data.Inner3.Inner31.Field != "test" {
-		t.Fatalf("incorrect value. expected=not_nil actual=%#v", data)
+		t.Fatalf("incorrect value Inner3. expected=not_nil actual=%#v", data.Inner3)
 	}
 }

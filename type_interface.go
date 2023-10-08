@@ -2,44 +2,38 @@ package envconf
 
 import (
 	"reflect"
+
+	"github.com/antonmashko/envconf/external"
 )
 
 type interfaceType struct {
-	field  // underline type
-	v      reflect.Value
-	p      field
-	sf     reflect.StructField
-	parser *EnvConf
+	*configField
+	f field // underline type
+	v reflect.Value
 }
 
-func newInterfaceType(v reflect.Value, p field, sf reflect.StructField, parser *EnvConf) *interfaceType {
+func newInterfaceType(v reflect.Value, f *configField) *interfaceType {
 	return &interfaceType{
-		field:  emptyField{},
-		v:      v,
-		p:      p,
-		sf:     sf,
-		parser: parser,
+		f:           emptyField{},
+		configField: f,
+		v:           v,
 	}
 }
 
-func (t *interfaceType) name() string {
-	return t.sf.Name
+func (i *interfaceType) externalSource() external.ExternalSource {
+	return i.f.externalSource()
 }
 
-func (t *interfaceType) parent() field {
-	return t.p
+func (i *interfaceType) init() error {
+	return i.f.init()
 }
 
-func (t *interfaceType) define() error {
-	if t.v.IsValid() && !t.v.IsZero() {
-		t.field = createFieldFromValue(t.v.Elem(), t.p, t.sf, t.parser)
-		if err := t.field.init(); err != nil {
+func (i *interfaceType) define() error {
+	if i.v.IsValid() && !i.v.IsZero() {
+		i.f = createFieldFromValue(i.v.Elem(), i.configField)
+		if err := i.f.init(); err != nil {
 			return err
 		}
 	}
-	return t.field.define()
-}
-
-func (t *interfaceType) structField() reflect.StructField {
-	return t.sf
+	return i.f.define()
 }
