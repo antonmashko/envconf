@@ -8,13 +8,10 @@ import (
 )
 
 type structType struct {
-	parser *EnvConf
-	p      field
+	*configField
 
 	sname string
 	v     reflect.Value
-	t     reflect.Type
-	tag   reflect.StructField
 	ext   external.ExternalSource
 
 	hasValue bool
@@ -35,21 +32,18 @@ func newParentStructType(data interface{}, parser *EnvConf) (*structType, error)
 		return nil, errors.New("invalid type")
 	}
 
-	s := newStructType(v, nil, reflect.StructField{}, parser)
+	s := newStructType(v, newConfigField(nil, reflect.StructField{}, parser))
 	return s, nil
 }
 
-func newStructType(val reflect.Value, parent field, tag reflect.StructField, parser *EnvConf) *structType {
-	sname := tag.Tag.Get("envconf")
+func newStructType(val reflect.Value, f *configField) *structType {
+	sname := f.Tag.Get("envconf")
 	return &structType{
-		parser: parser,
-		sname:  sname,
-		p:      parent,
-		v:      val,
-		t:      val.Type(),
-		tag:    tag,
-		ext:    external.NilContainer{},
-		fields: make([]field, val.NumField()),
+		sname:       sname,
+		configField: f,
+		v:           val,
+		ext:         external.NilContainer{},
+		fields:      make([]field, val.NumField()),
 	}
 }
 
@@ -57,18 +51,7 @@ func (s *structType) name() string {
 	if s.sname != "" {
 		return s.sname
 	}
-	return s.tag.Name
-}
-
-func (s *structType) parent() field {
-	if s.p == nil {
-		return nil
-	}
-	return s.p
-}
-
-func (s *structType) structField() reflect.StructField {
-	return s.tag
+	return s.Name
 }
 
 func (s *structType) isSet() bool {
@@ -81,9 +64,10 @@ func (s *structType) externalSource() external.ExternalSource {
 
 func (s *structType) init() error {
 	s.fields = make([]field, s.v.NumField())
+	rt := s.v.Type()
 	for i := 0; i < s.v.NumField(); i++ {
 		rfield := s.v.Field(i)
-		f := createFieldFromValue(rfield, s, s.t.Field(i), s.parser)
+		f := createFieldFromValue(rfield, newConfigField(s, rt.Field(i), s.parser))
 		if err := f.init(); err != nil {
 			return err
 		}
@@ -94,8 +78,8 @@ func (s *structType) init() error {
 }
 
 func (s *structType) define() error {
-	if s.p != nil {
-		s.ext = external.AsExternalSource(s.tag.Name, s.p.externalSource())
+	if s.parentField != nil {
+		s.ext = external.AsExternalSource(s.Name, s.parentField.externalSource())
 	}
 	for _, f := range s.fields {
 		err := f.define()
@@ -108,7 +92,7 @@ func (s *structType) define() error {
 				return &Error{
 					Message:   "failed to define field",
 					Inner:     err,
-					FieldName: fullname(f),
+					FieldName: fullname(f, fieldNameDelim),
 				}
 			}
 		}

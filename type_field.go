@@ -4,214 +4,124 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/antonmashko/envconf/external"
 	"github.com/antonmashko/envconf/option"
 )
 
-type definedValue struct {
-	source option.ConfigSource
-	value  interface{}
-}
-
 type fieldType struct {
-	v          reflect.Value
-	p          field
-	sf         reflect.StructField
-	parseOrder []option.ConfigSource
-
-	flag     *flagSource          // flag value
-	env      *envSource           // env value
-	ext      *externalValueSource // external value
-	def      *defaultValueSource  // default value
-	required bool                 // if it defined true, value should be defined
-	desc     string               // description
-
-	definedValue *definedValue
+	*configField
+	v  reflect.Value
+	sf reflect.StructField
 }
 
-func newFieldType(v reflect.Value, p field, sf reflect.StructField, parseOrder []option.ConfigSource, allowEnvInjection bool) *fieldType {
-	desc := sf.Tag.Get(tagDescription)
-	required, _ := strconv.ParseBool(sf.Tag.Get(tagRequired))
-	f := &fieldType{
-		v:          v,
-		p:          p,
-		sf:         sf,
-		parseOrder: parseOrder,
-		def:        newDefaultValueSource(sf),
-		required:   required,
-		desc:       desc,
+func newFieldType(v reflect.Value, s *configField) *fieldType {
+	return &fieldType{
+		configField: s,
+		v:           v,
 	}
-	f.flag = newFlagSource(f, sf, desc)
-	f.env = newEnvSource(f, sf)
-	f.ext = newExternalValueSource(f, allowEnvInjection)
-	return f
 }
 
-func (t *fieldType) name() string {
-	return t.sf.Name
-}
-
-func (t *fieldType) parent() field {
-	return t.p
-}
-
-func (t *fieldType) isSet() bool {
-	return t.definedValue != nil
-}
-
-func (t *fieldType) structField() reflect.StructField {
-	return t.sf
-}
-
-func (t *fieldType) IsRequired() bool {
-	return t.required
-}
-
-func (t *fieldType) externalSource() external.ExternalSource {
+func (*fieldType) externalSource() external.ExternalSource {
 	return external.NilContainer{}
 }
 
-func (t *fieldType) init() error {
-	return nil
+func (f *fieldType) init() error {
+	return f.configField.init(f)
 }
 
-func (t *fieldType) readValue() (interface{}, option.ConfigSource, error) {
-	// create correct parse priority
-	for _, p := range t.parseOrder {
-		var v interface{}
-		var ok bool
-		switch p {
-		case option.FlagVariable:
-			v, ok = t.flag.Value()
-		case option.EnvVariable:
-			v, ok = t.env.Value()
-		case option.ExternalSource:
-			v, p, ok = t.ext.Value()
-		case option.DefaultValue:
-			v, ok = t.def.Value()
-		}
-		if ok {
-			return v, p, nil
-		}
-	}
-	return nil, option.ConfigSource(-1), ErrConfigurationNotFound
-}
-
-func (t *fieldType) define() error {
-	if t.definedValue != nil {
-		return nil
-	}
-	v, p, err := t.readValue()
-	if err != nil {
-		return err
+func (f *fieldType) define() error {
+	v, cs := f.configField.Value()
+	if cs == option.NoConfigValue {
+		return ErrConfigurationNotFound
 	}
 
-	if str, ok := v.(string); ok && p != option.ExternalSource {
-		v, err = setFromString(t.v, str)
-		if err != nil {
-			return &Error{
-				Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
-				FieldName: fullname(t),
-				Message:   "cannot set",
-			}
-		}
+	if cs == option.ExternalSource {
+		// field should be defined through External.Unmarshal func
+		return f.set(v, cs)
 	}
 
-	t.definedValue = &definedValue{
-		source: p,
-		value:  v,
-	}
-	return nil
-}
-
-func (t *fieldType) defineFromValue(v interface{}, p option.ConfigSource) error {
 	str, ok := v.(string)
-	if ok {
-		var err error
-		v, err = setFromString(t.v, str)
-		if err != nil {
-			return &Error{
-				Inner:     fmt.Errorf("type=%s source=%s. %w", t.sf.Type, p, err),
-				FieldName: fullname(t),
-				Message:   "cannot set",
-			}
+	if !ok {
+		return &Error{
+			Inner:     ErrUnsupportedType,
+			FieldName: f.fullName(),
+			Message:   "v is not string",
+		}
+	}
+	if !f.v.CanSet() {
+		return &Error{
+			Inner:     errors.New("reflect: cannot set"),
+			FieldName: f.fullName(),
 		}
 	}
 
-	t.definedValue = &definedValue{
-		source: p,
-		value:  v,
+	var err error
+	v, err = setFromString(f.v, str)
+	if err != nil {
+		return &Error{
+			Inner:     fmt.Errorf("type=%s source=%s. %w", f.sf.Type, cs, err),
+			FieldName: f.fullName(),
+			Message:   "cannot set",
+		}
 	}
 
-	return nil
+	return f.set(v, cs)
 }
 
-func setFromString(field reflect.Value, value string) (interface{}, error) {
-	if implF := asImpl(field); implF != nil {
-		return value, implF([]byte(value))
+type interfaceFieldType struct {
+	*fieldType
+}
+
+func (f *interfaceFieldType) define() error {
+	v, cs := f.Value()
+	if cs == option.NoConfigValue {
+		return ErrConfigurationNotFound
 	}
-	oval := value
-	value = strings.Trim(value, " ")
-	if !field.CanSet() {
-		return nil, errors.New("reflect: cannot set")
+	if cs == option.ExternalSource {
+		// field should be defined through External.Unmarshal func
+		return f.set(v, cs)
+	}
+	rv := reflect.ValueOf(v)
+	if !rv.Type().AssignableTo(f.v.Type()) {
+		return &Error{
+			FieldName: f.fullName(),
+			Message:   fmt.Sprintf("unable to assign type %s to %s", rv.Type(), f.sf.Type),
+		}
+	}
+	f.v.Set(rv)
+	return f.set(v, cs)
+}
+
+type customSetFieldType struct {
+	*fieldType
+}
+
+func (f *customSetFieldType) define() error {
+	v, cs := f.Value()
+	if cs == option.NoConfigValue {
+		return ErrConfigurationNotFound
 	}
 
-	// native complex types
-	switch field.Interface().(type) {
-	case time.Duration:
-		d, err := time.ParseDuration(value)
-		if err != nil {
-			return nil, err
-		}
-		field.SetInt(d.Nanoseconds())
-		return d, nil
+	if cs == option.ExternalSource {
+		// field should be defined through External.Unmarshal func
+		return f.set(v, cs)
 	}
 
-	// primitives and collections
-	switch field.Kind() {
-	case reflect.String:
-		field.SetString(oval)
-		return oval, nil
-	case reflect.Bool:
-		i, err := strconv.ParseBool(value)
-		if err != nil {
-			return nil, err
+	str, ok := v.(string)
+	if !ok {
+		return &Error{
+			Inner:     ErrUnsupportedType,
+			FieldName: f.fullName(),
+			Message:   "v is not string",
 		}
-		field.SetBool(i)
-		return i, nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		i, err := strconv.ParseInt(value, 0, field.Type().Bits())
-		if err != nil {
-			return nil, err
-		}
-		field.SetInt(i)
-		return i, nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		i, err := strconv.ParseUint(value, 0, field.Type().Bits())
-		if err != nil {
-			return nil, err
-		}
-		field.SetUint(i)
-		return i, nil
-	case reflect.Float32, reflect.Float64:
-		i, err := strconv.ParseFloat(value, field.Type().Bits())
-		if err != nil {
-			return nil, err
-		}
-		field.SetFloat(i)
-		return i, nil
-	case reflect.Complex64, reflect.Complex128:
-		i, err := strconv.ParseComplex(value, field.Type().Bits())
-		if err != nil {
-			return nil, err
-		}
-		field.SetComplex(i)
-		return i, nil
-	default:
-		return nil, ErrUnsupportedType
 	}
+	implF := asImpl(f.v)
+	if implF == nil {
+		return errors.New("setter not found")
+	}
+	if err := implF([]byte(str)); err != nil {
+		return &Error{Inner: err, FieldName: f.fullName()}
+	}
+	return f.set(v, cs)
 }

@@ -121,7 +121,7 @@ func TestParse_Map_Ok(t *testing.T) {
 	}
 }
 
-func TestParse_MapX_Ok(t *testing.T) {
+func TestParse_MapValueInterfaceDefinedValue_Ok(t *testing.T) {
 	v1 := &struct {
 		Field1 int `default:"5"`
 	}{}
@@ -141,6 +141,19 @@ func TestParse_MapX_Ok(t *testing.T) {
 	}
 }
 
+func TestParse_MapValueInterface_Ok(t *testing.T) {
+	cfg := struct {
+		Field map[string]interface{} `default:"1:test,2:test2"`
+	}{}
+
+	if err := envconf.Parse(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Field["1"] != "test" {
+		t.Fatalf("incorrect result. expected=%v actual=%v", "test", cfg.Field["1"])
+	}
+}
+
 func TestParse_Map_ErrUnsupportedType(t *testing.T) {
 	t.Run("InvalidValue", func(t *testing.T) {
 		cfg := struct {
@@ -148,10 +161,10 @@ func TestParse_Map_ErrUnsupportedType(t *testing.T) {
 		}{}
 		os.Setenv("TEST_PARSE_MAP_OK_ErrUnsupportedType", "1:1")
 		if err := envconf.Parse(&cfg); err != nil {
-			t.Fatal("expected nil but got error")
+			t.Fatal("expected nil but got error: ", err)
 		}
-		if v, ok := cfg.Field[1]; !ok || v != nil {
-			t.Fatalf("unexpected result: %v", cfg.Field)
+		if v, ok := cfg.Field[1]; !ok || v != "1" {
+			t.Fatalf("unexpected result: %#v", cfg.Field)
 		}
 	})
 

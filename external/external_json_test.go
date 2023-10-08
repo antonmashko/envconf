@@ -54,8 +54,9 @@ func TestJsonConfig_NestedStructExternal_OK(t *testing.T) {
 	if err := envconf.Parse(&tc, option.WithExternal(jsonconf.Json([]byte(json)))); err != nil {
 		t.Errorf("failed to external parse. err=%s", err)
 	}
-	if tc.Foo.Bar.FooBar != "foo_bar" {
-		t.Errorf("incorrect value was set. %#v", tc.Foo)
+	const expected = "foo_bar"
+	if tc.Foo.Bar.FooBar != expected {
+		t.Errorf("incorrect value. expected=%s actual=%s", expected, tc.Foo.Bar.FooBar)
 	}
 }
 

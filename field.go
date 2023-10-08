@@ -9,9 +9,13 @@ import (
 
 const fieldNameDelim = "."
 
-type field interface {
+type namedField interface {
 	name() string
 	parent() field
+}
+
+type field interface {
+	namedField
 	init() error
 	define() error
 	isSet() bool
@@ -53,9 +57,9 @@ func (emptyField) externalSource() external.ExternalSource {
 	return external.NilContainer{}
 }
 
-func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parser *EnvConf) field {
+func createFieldFromValue(v reflect.Value, f *configField) field {
 	if v.Kind() == reflect.Pointer {
-		return newPtrType(v, p, t, parser)
+		return newPtrType(v, f)
 	}
 	// validate reflect value
 	if !v.CanInterface() {
@@ -65,43 +69,33 @@ func createFieldFromValue(v reflect.Value, p field, t reflect.StructField, parse
 	// implementations check
 	implF := asImpl(v)
 	if implF != nil {
-		return newFieldType(v, p, t, parser.PriorityOrder(), parser.opts.AllowExternalEnvInjection)
+		return &customSetFieldType{newFieldType(v, f)}
 	}
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return newStructType(v, p, t, parser)
+		return newStructType(v, f)
 	case reflect.Interface:
-		return newInterfaceType(v, p, t, parser)
+		if v.IsNil() {
+			return &interfaceFieldType{
+				fieldType: newFieldType(v, f),
+			}
+		}
+		return newInterfaceType(v, f)
 	case reflect.Array, reflect.Slice:
 		return &collectionSliceType{
-			collectionType: newCollectionType(v, p, t, parser),
+			collectionType: newCollectionType(v, f),
 		}
 	case reflect.Map:
 		return &collectionMapType{
-			collectionType: newCollectionType(v, p, t, parser),
+			collectionType: newCollectionType(v, f),
 		}
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types
 		return emptyField{}
 	default:
-		return newFieldType(v, p, t, parser.PriorityOrder(), parser.opts.AllowExternalEnvInjection)
+		return newFieldType(v, f)
 	}
-}
-
-func fullname(f field) string {
-	name := f.name()
-	for {
-		f = f.parent()
-		if f == nil {
-			break
-		}
-		oname := f.name()
-		if oname != "" {
-			name = oname + fieldNameDelim + name
-		}
-	}
-	return name
 }
 
 func asImpl(field reflect.Value) func([]byte) error {
@@ -136,15 +130,40 @@ func asImpl(field reflect.Value) func([]byte) error {
 	return nil
 }
 
-func asFieldType(f field) *fieldType {
+func asConfigField(f field) *configField {
 	switch ft := f.(type) {
 	case *fieldType:
-		return ft
+		return ft.configField
 	case *ptrType:
-		return asFieldType(ft.field)
+		return asConfigField(ft.f)
 	case *interfaceType:
-		return asFieldType(ft.field)
+		return asConfigField(ft.f)
+	case *interfaceFieldType:
+		return ft.configField
+	case *customSetFieldType:
+		return ft.configField
+	case *collectionType:
+		return ft.configField
 	default:
 		return nil
 	}
+}
+
+func fullname(f namedField, delim string) string {
+	if f == nil {
+		return ""
+	}
+	name := f.name()
+	for {
+		f = f.parent()
+		if f == nil {
+			break
+		}
+		pname := f.name()
+		if pname == "" {
+			break
+		}
+		name = pname + delim + name
+	}
+	return name
 }

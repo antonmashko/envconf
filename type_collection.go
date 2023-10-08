@@ -11,17 +11,21 @@ import (
 	"github.com/antonmashko/envconf/option"
 )
 
+var _ field = (*collectionSliceType)(nil)
+var _ field = (*collectionMapType)(nil)
+
 type collectionType struct {
-	*fieldType
-	parser *EnvConf
-	ext    external.ExternalSource
+	*configField
+	v   reflect.Value
+	p   field
+	ext external.ExternalSource
 }
 
-func newCollectionType(v reflect.Value, p field, sf reflect.StructField, parser *EnvConf) *collectionType {
+func newCollectionType(v reflect.Value, f *configField) *collectionType {
 	return &collectionType{
-		fieldType: newFieldType(v, p, sf, parser.PriorityOrder(), parser.opts.AllowExternalEnvInjection),
-		parser:    parser,
-		ext:       external.NilContainer{},
+		configField: f,
+		v:           v,
+		ext:         external.NilContainer{},
 	}
 }
 
@@ -29,26 +33,25 @@ func (c *collectionType) externalSource() external.ExternalSource {
 	return c.ext
 }
 
-func (c *collectionType) defineItem(v reflect.Value, p field, sf reflect.StructField, value interface{}, cs option.ConfigSource) error {
-	f := createFieldFromValue(v, p, sf, c.parser)
+func (c *collectionType) defineItem(v reflect.Value, cf *configField) error {
+	f := createFieldFromValue(v, cf)
 	if err := f.init(); err != nil {
 		return err
 	}
 	c.parser.fieldInitialized(f)
 	if err := f.define(); err != nil {
-		ft := asFieldType(f)
-		if ft != nil && err == ErrConfigurationNotFound {
-			err = ft.defineFromValue(value, cs)
-			if err != nil {
-				c.parser.fieldNotDefined(f, err)
-				return err
-			}
-		} else {
-			c.parser.fieldNotDefined(f, err)
-			return err
-		}
+		c.parser.fieldNotDefined(f, err)
+		return err
 	}
 	c.parser.fieldDefined(f)
+	return nil
+}
+
+func (c *collectionType) init() error {
+	return c.configField.init(c)
+}
+
+func (c *collectionType) define() error {
 	return nil
 }
 
@@ -67,9 +70,11 @@ func (t *collectionSliceType) createFromString(value string, cs option.ConfigSou
 		t.v.Set(reflect.MakeSlice(t.v.Type(), len(sl), cap(sl)))
 	}
 
-	for i := 0; i < t.v.Len(); i++ {
+	for i := range sl {
 		rv := t.v.Index(i)
-		err := t.defineItem(rv, t, reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()}, sl[i], cs)
+		st := newDefinedConfigField(sl[i], cs, t,
+			reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()}, t.parser)
+		err := t.defineItem(rv, st)
 		if err != nil {
 			return nil, err
 		}
@@ -79,74 +84,76 @@ func (t *collectionSliceType) createFromString(value string, cs option.ConfigSou
 
 func (t *collectionSliceType) define() error {
 	if t.p != nil {
-		t.ext = external.AsExternalSource(t.sf.Name, t.p.externalSource())
+		t.ext = external.AsExternalSource(t.Name, t.p.externalSource())
 	}
-	v, p, err := t.readValue()
-	if err == nil {
-		// value specified for entire collection
-		value, ok := v.(string)
-		if ok {
-			_, err = t.createFromString(value, p)
-			if err != nil {
-				return err
+	v, cs := t.Value()
+	if cs != option.NoConfigValue {
+		// return ErrConfigurationNotFound
+		if cs != option.ExternalSource {
+			// value specified for entire collection
+			value, ok := v.(string)
+			if ok {
+				var err error
+				v, err = t.createFromString(value, cs)
+				if err != nil {
+					return err
+				}
+				return t.set(v, cs)
 			}
-			return nil
+			// return ErrUnsupportedType
 		}
 	}
 
 	if !t.v.CanInterface() {
-		return nil
+		return errors.New("reflect: cannot interface")
 	}
 	v = t.v.Interface()
-	p = option.ConfigSource(-1)
-
 	for i := 0; i < t.v.Len(); i++ {
 		rv := t.v.Index(i)
-		err = t.defineItem(rv, t, reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()},
-			rv.Interface(), p)
+		if !rv.CanInterface() {
+			return errors.New("reflect: cannot interface")
+		}
+		st := newDefinedConfigField(rv.Interface(), cs, t,
+			reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()}, t.parser)
+		err := t.defineItem(rv, st)
 		if err != nil {
 			return err
 		}
 	}
-
-	t.definedValue = &definedValue{
-		source: p,
-		value:  v,
-	}
-
-	return nil
+	return t.set(v, cs)
 }
 
 type collectionMapType struct {
 	*collectionType
 }
 
-func (t *collectionMapType) createFromString(value string, p option.ConfigSource) (interface{}, error) {
+func (t *collectionMapType) createFromString(value string, cs option.ConfigSource) (interface{}, error) {
 	sl := strings.Split(value, ",")
 	vt := t.v.Type()
 	rmp := reflect.MakeMap(vt)
-	key := vt.Key()
-	elem := vt.Elem()
+	rkeyType := vt.Key()
+	rvalType := vt.Elem()
 	for i := range sl {
 		idx := strings.IndexRune(sl[i], ':')
-		rvkey := reflect.New(key).Elem()
-		rvval := reflect.New(elem).Elem()
 		var key, value string
-		var err error
 		if idx == -1 {
 			key = sl[i]
 		} else {
 			key = sl[i][:idx]
 			value = sl[i][idx+1:]
 		}
-		if _, err := setFromString(rvkey, key); err != nil {
-			return nil, err
-		}
-		err = t.defineItem(rvval, t, reflect.StructField{Name: fmt.Sprint(key), Type: rvkey.Type()}, value, p)
+		rvkey, _, err := createFromString(rkeyType, key)
 		if err != nil {
 			return nil, err
 		}
-		rmp.SetMapIndex(rvkey, rvval)
+		st := newDefinedConfigField(value, cs, t,
+			reflect.StructField{Name: fmt.Sprint(key), Type: rvalType}, t.parser)
+		rvvalue := reflect.New(rvalType).Elem()
+		err = t.defineItem(rvvalue, st)
+		if err != nil {
+			return nil, err
+		}
+		rmp.SetMapIndex(rvkey, rvvalue)
 	}
 	t.v.Set(rmp)
 	return sl, nil
@@ -154,18 +161,23 @@ func (t *collectionMapType) createFromString(value string, p option.ConfigSource
 
 func (t *collectionMapType) define() error {
 	if t.p != nil {
-		t.ext = external.AsExternalSource(t.sf.Name, t.p.externalSource())
+		t.ext = external.AsExternalSource(t.Name, t.p.externalSource())
 	}
-	v, p, err := t.readValue()
-	if err == nil {
-		// value specified for entire collection
-		value, ok := v.(string)
-		if ok {
-			_, err = t.createFromString(value, p)
-			if err != nil {
-				return err
+	v, cs := t.Value()
+	if cs != option.NoConfigValue {
+		// return ErrConfigurationNotFound
+		if cs != option.ExternalSource {
+			// value specified for entire collection
+			value, ok := v.(string)
+			if ok {
+				var err error
+				v, err = t.createFromString(value, cs)
+				if err != nil {
+					return err
+				}
+				return t.set(v, cs)
 			}
-			return nil
+			// return ErrUnsupportedType
 		}
 	}
 
@@ -173,32 +185,22 @@ func (t *collectionMapType) define() error {
 		return nil
 	}
 	v = t.v.Interface()
-	p = option.ConfigSource(-1)
-
 	mp := t.v.MapRange()
 	for mp.Next() {
 		rkey := mp.Key()
 		rval := mp.Value()
 		if !rkey.CanInterface() {
-			continue
+			return errors.New("reflect: cannot interface map.Key")
 		}
-
-		var iv interface{}
-		if rval.CanInterface() {
-			iv = rval.Interface()
+		if !rval.CanInterface() {
+			return errors.New("reflect: cannot interface map.Value")
 		}
-
-		err = t.defineItem(rval, t, reflect.StructField{Name: fmt.Sprint(rkey.Interface()), Type: rval.Type()},
-			iv, p)
+		st := newDefinedConfigField(rval.Interface(), cs, t,
+			reflect.StructField{Name: fmt.Sprint(rkey.Interface()), Type: rval.Type()}, t.parser)
+		err := t.defineItem(rval, st)
 		if err != nil {
 			return err
 		}
 	}
-
-	t.definedValue = &definedValue{
-		source: p,
-		value:  v,
-	}
-
-	return nil
+	return t.set(v, cs)
 }

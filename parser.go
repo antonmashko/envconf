@@ -17,68 +17,52 @@ func New() *EnvConf {
 	}
 }
 
-func (e *EnvConf) fieldType(f field) *fieldType {
-	switch ft := f.(type) {
-	case *fieldType:
-		return ft
-	case *ptrType:
-		return e.fieldType(ft.field)
-	case *interfaceType:
-		return e.fieldType(ft.field)
-	default:
-		return nil
-	}
-}
-
 func (e *EnvConf) fieldInitialized(f field) {
-	pt := e.fieldType(f)
-	if pt == nil {
+	cf := asConfigField(f)
+	if cf == nil {
 		return
 	}
-	dv, _ := pt.def.Value()
+	dv, _ := cf.configuration.defaultValue.Value()
 	e.opts.OnFieldInitialized(option.FieldInitializedArg{
-		Name:         pt.name(),
-		FullName:     fullname(pt),
-		Type:         pt.sf.Type,
-		Required:     pt.required,
-		Description:  pt.desc,
-		FlagName:     pt.flag.Name(),
-		EnvName:      pt.env.Name(),
+		Name:         cf.name(),
+		FullName:     cf.fullName(),
+		Type:         cf.StructField.Type,
+		Required:     cf.property.required,
+		Description:  cf.property.description,
+		FlagName:     cf.configuration.flag.Name(),
+		EnvName:      cf.configuration.env.Name(),
 		DefaultValue: dv,
 	})
 }
 
 func (e *EnvConf) fieldDefined(f field) {
-	pt := e.fieldType(f)
-	if pt == nil {
+	cf := asConfigField(f)
+	if cf == nil || !cf.isSet() {
 		return
 	}
-	if pt.definedValue == nil {
-		return
-	}
-	dv, _ := pt.def.Value()
+	dv, _ := cf.configuration.defaultValue.Value()
 	e.opts.OnFieldDefined(option.FieldDefinedArg{
-		Name:         pt.name(),
-		FullName:     fullname(pt),
-		Type:         pt.sf.Type,
-		Required:     pt.required,
-		Description:  pt.desc,
-		FlagName:     pt.flag.Name(),
-		EnvName:      pt.env.Name(),
+		Name:         cf.name(),
+		FullName:     cf.fullName(),
+		Type:         cf.StructField.Type,
+		Required:     cf.property.required,
+		Description:  cf.property.description,
+		FlagName:     cf.configuration.flag.Name(),
+		EnvName:      cf.configuration.env.Name(),
 		DefaultValue: dv,
-		Source:       pt.definedValue.source,
-		Value:        pt.definedValue.value,
+		Value:        cf.value,
+		Source:       cf.source,
 	})
 }
 
 func (e *EnvConf) fieldNotDefined(f field, err error) {
-	pt := e.fieldType(f)
-	if pt == nil {
+	cf := asConfigField(f)
+	if cf == nil {
 		return
 	}
 	e.opts.OnFieldDefineErr(option.FieldDefineErrorArg{
-		Name:     pt.name(),
-		FullName: fullname(pt),
+		Name:     cf.name(),
+		FullName: cf.fullName(),
 		Err:      err,
 	})
 }
