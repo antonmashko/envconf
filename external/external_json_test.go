@@ -332,7 +332,7 @@ func TestJsonConfig_EnvVarInjection_Ok(t *testing.T) {
 	os.Setenv("JSON_TEST_ENVVAR_INJECTION", expectedValue)
 	err := envconf.Parse(&tc,
 		option.WithExternal(jsonconf.Json([]byte(json))),
-		option.WithExternalEnvInjection(true),
+		option.WithExternalInjection(),
 	)
 	if err != nil {
 		t.Fatalf("failed to external parse. err=%s", err)
@@ -359,7 +359,7 @@ func TestJsonConfig_EnvVarInjectionFromCollection_Ok(t *testing.T) {
 	os.Setenv("JSON_TEST_ENVVAR_INJECTION", expectedValue)
 	err := envconf.Parse(&tc,
 		option.WithExternal(jsonconf.Json([]byte(json))),
-		option.WithExternalEnvInjection(true),
+		option.WithExternalInjection(),
 	)
 	if err != nil {
 		t.Fatalf("failed to external parse. err=%s", err)

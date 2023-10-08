@@ -123,8 +123,10 @@ Options allow intercept into `EnvConf.Parse` process
 
 Name|Option|Description
 ---|---|---
+External source|`option.WithExternal`|Add external configuration source to the parsing process. This option allows you to define field from configuration files, remote servers, etc. Some of Externals already predefined in `external` folder, e.g. external/json or external/yaml. see: [External Doc](external/readme.md)
 Read configuration priority|`option.WithPriorityOrder`|Change default parsing priority. Default: *Flag*, *Environment variable*, *External source*, *Default Value*
 Log|`option.WithLog`|Enable logging over parsing process. Prints defined and not defined configuration fields
 Custom Usage|`option.WithCustomUsage`|Generate usage for `-help` flag from input structure. By default this option is enabled, use `option.WithoutCustomUsage` option
 Flag Parsed Callback|`option.WithFlagParsed`|This callback allow to use flags after flag.Parse() and before EnvConf.Define process
-Read config file|`external.WithFlagConfigFile`|Read config file from the path specified in the flag
+Read config file|`option.WithFlagConfigFile`|Read config file from the path specified in the flag. This option working with `External` option.
+External Injection|`option.WithExternalInjection`|Inject environment variables into external source. Override default injection with `option.WithCustomExternalInjection`

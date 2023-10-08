@@ -126,19 +126,22 @@ func (s *externalSource) Value() (interface{}, option.ConfigSource) {
 	if !ok {
 		return nil, option.NoConfigValue
 	}
-	envInjF := s.opts.ExternalEnvInjection()
-	if envInjF != nil {
+	envInjF := s.opts.ExternalInjection()
+	if envInjF == nil {
 		return v, option.ExternalSource
 	}
 	str, ok := v.(string)
 	if !ok {
 		return v, option.ExternalSource
 	}
-	str, ok = envInjF(str)
-	if envInj == nil {
+	var cs option.ConfigSource
+	str, cs = envInjF(str)
+	switch cs {
+	case option.EnvVariable:
+		return (&envSource{name: str}).Value()
+	default:
 		return v, option.ExternalSource
 	}
-	return envInj.Value()
 }
 
 type defaultValueSource struct {
@@ -204,7 +207,7 @@ func (f *configField) init(fl field) error {
 	f.property.description = f.Tag.Get(tagDescription)
 	f.configuration.flag = newFlagSource(f, f.StructField, f.property.description)
 	f.configuration.env = newEnvSource(f, f.StructField)
-	f.configuration.external = newExternalSource(fl, f.parser.opts.AllowExternalEnvInjection)
+	f.configuration.external = newExternalSource(fl, f.parser.opts)
 	f.configuration.defaultValue = newDefaultValueSource(f.StructField)
 	return nil
 }

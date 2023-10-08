@@ -45,14 +45,14 @@ type ClientOption interface {
 }
 
 type Options struct {
-	external             external.External
-	priorityOrder        []ConfigSource
-	flagParsed           func() error
-	usage                func()
-	onFieldInitialized   func(FieldInitializedArg)
-	onFieldDefined       func(FieldDefinedArg)
-	onFieldDefineErr     func(FieldDefineErrorArg)
-	externalEnvInjection func(string) (string, ConfigSource)
+	external           external.External
+	priorityOrder      []ConfigSource
+	flagParsed         func() error
+	usage              func()
+	onFieldInitialized func(FieldInitializedArg)
+	onFieldDefined     func(FieldDefinedArg)
+	onFieldDefineErr   func(FieldDefineErrorArg)
+	externalInjection  func(string) (string, ConfigSource)
 }
 
 func (o *Options) External() external.External {
@@ -97,6 +97,6 @@ func (o *Options) OnFieldDefineErr(arg FieldDefineErrorArg) {
 	}
 }
 
-func (o *Options) ExternalEnvInjection() func(string) (string, bool) {
-	return o.externalEnvInjection
+func (o *Options) ExternalInjection() func(string) (string, ConfigSource) {
+	return o.externalInjection
 }

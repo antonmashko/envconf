@@ -4,15 +4,17 @@ import "strings"
 
 type withExternalEnvInjection func(string) (string, ConfigSource)
 
-func (o withExternalEnvInjection) Apply(opts *Options) {
-	opts.externalEnvInjection = o
+func (f withExternalEnvInjection) Apply(opts *Options) {
+	opts.externalInjection = f
 }
 
-func WithExternalEnvInjection() ClientOption {
-	return WithCustomExternalEnvInjection(nil)
+// WithExternalInjection allows to inject variables from an external source
+// use format ${ .env.<ENV_VAR_NAME> } to make an env variable lookup while getting a field from the external source
+func WithExternalInjection() ClientOption {
+	return WithCustomExternalInjection(nil)
 }
 
-func WithCustomExternalEnvInjection(f func(string) (string, ConfigSource)) ClientOption {
+func WithCustomExternalInjection(f func(string) (string, ConfigSource)) ClientOption {
 	if f == nil {
 		f = func(value string) (string, ConfigSource) {
 			var ok bool
