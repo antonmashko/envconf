@@ -1,8 +1,6 @@
 package envconf
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 )
 
@@ -26,14 +24,4 @@ func TestEmptyField_Ok(t *testing.T) {
 	if et.structField().Tag != "" {
 		t.Fatal("emptyField.structField: ", et.structField().Tag)
 	}
-}
-
-func TestCreateField_Ok(t *testing.T) {
-	st := struct {
-		Field fmt.Stringer
-	}{}
-	rv := reflect.ValueOf(st)
-	rv = rv.Field(0)
-	f := createFieldFromValue(rv, newConfigField(emptyField{}, reflect.StructField{Type: rv.Type()}, New()))
-	t.Logf("%[1]v %[1]T", f)
 }
