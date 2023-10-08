@@ -33,6 +33,7 @@ Use tags for getting values from different configuration sources.
 1. Primitives: `bool`, `string`, all types of `int` and `unit`, `float32`, `float64`, `complex64`, `complex128`;
 2. Collections:
 	- Array and Slice - comma-separated string can be converted into slice or array. NOTE: if elements in string more than len of array EnvConf will panic with `index out of range`.
+	- []byte - coverts string config into byte slice
 	- Map - comma-separated string with a colon-separated key and value can be converted into map. example input: `key1:value1, key2:value2`
 3. Golang types:
 	- interface{}
