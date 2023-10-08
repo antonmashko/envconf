@@ -52,8 +52,7 @@ type Options struct {
 	onFieldInitialized func(FieldInitializedArg)
 	onFieldDefined     func(FieldDefinedArg)
 	onFieldDefineErr   func(FieldDefineErrorArg)
-
-	AllowExternalEnvInjection bool
+	externalInjection  func(string) (string, ConfigSource)
 }
 
 func (o *Options) External() external.External {
@@ -98,12 +97,6 @@ func (o *Options) OnFieldDefineErr(arg FieldDefineErrorArg) {
 	}
 }
 
-type withAllowExternalEnvInjection bool
-
-func (o withAllowExternalEnvInjection) Apply(opts *Options) {
-	opts.AllowExternalEnvInjection = bool(o)
-}
-
-func WithExternalEnvInjection(allow bool) ClientOption {
-	return withAllowExternalEnvInjection(allow)
+func (o *Options) ExternalInjection() func(string) (string, ConfigSource) {
+	return o.externalInjection
 }
