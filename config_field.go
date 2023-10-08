@@ -144,8 +144,8 @@ func (s *externalSource) Value() (interface{}, option.ConfigSource) {
 	if s.f.parent() == nil {
 		return nil, option.NoConfigValue
 	}
-	es := s.f.parent().externalSource()
-	v, ok := es.Read(s.f.structField().Name)
+	v, ok := s.f.parent().externalSource().
+		Read(s.f.structField().Name)
 	if !ok {
 		return nil, option.NoConfigValue
 	}

@@ -83,13 +83,9 @@ func createFieldFromValue(v reflect.Value, f *configField) field {
 		}
 		return newInterfaceType(v, f)
 	case reflect.Array, reflect.Slice:
-		return &collectionSliceType{
-			collectionType: newCollectionType(v, f),
-		}
+		return newSliceType(v, f)
 	case reflect.Map:
-		return &collectionMapType{
-			collectionType: newCollectionType(v, f),
-		}
+		return newMapType(v, f)
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Uintptr:
 		// unsupported types
 		return emptyField{}
