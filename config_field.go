@@ -90,29 +90,6 @@ func newEnvSource(f *configField, tag reflect.StructField) *envSource {
 	}
 }
 
-func newEnvInjection(value string) *envSource {
-	var ok bool
-	const prefix = "${"
-	value, ok = strings.CutPrefix(value, prefix)
-	if !ok {
-		return nil
-	}
-
-	const suffix = "}"
-	value, ok = strings.CutSuffix(value, suffix)
-	if !ok {
-		return nil
-	}
-
-	value = strings.TrimSpace(value)
-	const envInjectionPrefix = ".env."
-	value, ok = strings.CutPrefix(value, envInjectionPrefix)
-	if !ok {
-		return nil
-	}
-	return &envSource{name: value}
-}
-
 func (s *envSource) Name() string {
 	return s.name
 }
@@ -129,14 +106,14 @@ func (s *envSource) Value() (interface{}, option.ConfigSource) {
 }
 
 type externalSource struct {
-	f                 field
-	allowEnvInjection bool
+	f    field
+	opts *option.Options
 }
 
-func newExternalSource(f field, allowEnvInjection bool) *externalSource {
+func newExternalSource(f field, opts *option.Options) *externalSource {
 	return &externalSource{
-		f:                 f,
-		allowEnvInjection: allowEnvInjection,
+		f:    f,
+		opts: opts,
 	}
 }
 
@@ -149,14 +126,15 @@ func (s *externalSource) Value() (interface{}, option.ConfigSource) {
 	if !ok {
 		return nil, option.NoConfigValue
 	}
-	if !s.allowEnvInjection {
+	envInjF := s.opts.ExternalEnvInjection()
+	if envInjF != nil {
 		return v, option.ExternalSource
 	}
 	str, ok := v.(string)
 	if !ok {
 		return v, option.ExternalSource
 	}
-	envInj := newEnvInjection(str)
+	str, ok = envInjF(str)
 	if envInj == nil {
 		return v, option.ExternalSource
 	}
