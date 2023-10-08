@@ -410,3 +410,35 @@ func TestParse_PrivateFieldPointer_Ok(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestParse_EmptyInterface_Ok(t *testing.T) {
+	ts := struct {
+		Field1 interface{} `default:"field1"`
+		Field2 struct {
+			Field21 interface{} `default:"field21"`
+		}
+		Field3 []interface{} `default:"1,2"`
+		Field4 *interface{}  `default:"field4"`
+	}{}
+	if err := envconf.Parse(&ts); err != nil {
+		t.Fatal("envconf.Parse: ", err)
+	}
+	if str, _ := ts.Field1.(string); str != "field1" {
+		Fatal(t, "field1", ts.Field1, "ts.Field1")
+	}
+	if str, _ := ts.Field2.Field21.(string); str != "field21" {
+		Fatal(t, "field21", ts.Field2.Field21, "ts.Field2.Field21")
+	}
+	if len(ts.Field3) < 2 {
+		Fatal(t, 2, len(ts.Field3), "len(ts.Field3)")
+	}
+	if str, _ := ts.Field3[0].(string); str != "1" {
+		Fatal(t, "1", ts.Field3[0], "ts.Field3[0]")
+	}
+	if str, _ := ts.Field3[1].(string); str != "2" {
+		Fatal(t, "2", ts.Field3[1], "ts.Field3[1]")
+	}
+	if str, _ := (*ts.Field4).(string); str != "field4" {
+		Fatal(t, "field4", ts.Field4, "ts.Field4")
+	}
+}

@@ -3,7 +3,6 @@ package envconf
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -136,7 +135,6 @@ func (s *sliceType) rescan(cs option.ConfigSource) (interface{}, error) {
 		if !rv.CanInterface() {
 			return nil, errors.New("reflect: cannot interface")
 		}
-		log.Println("TUTA")
 		st := newDefinedConfigField(rv.Interface(), cs, s,
 			reflect.StructField{Name: strconv.Itoa(i), Type: rv.Type()}, s.parser)
 		err := s.defineItem(rv, st)
