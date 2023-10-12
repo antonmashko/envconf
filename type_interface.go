@@ -29,11 +29,15 @@ func (i *interfaceType) init() error {
 }
 
 func (i *interfaceType) define() error {
-	if i.v.IsValid() && !i.v.IsZero() {
+	if !i.v.IsNil() {
 		i.f = createFieldFromValue(i.v.Elem(), i.configField)
-		if err := i.f.init(); err != nil {
-			return err
+	} else {
+		i.f = &interfaceFieldType{
+			fieldType: newFieldType(i.v, i.configField),
 		}
+	}
+	if err := i.f.init(); err != nil {
+		return err
 	}
 	return i.f.define()
 }
