@@ -1,6 +1,10 @@
 package external_test
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -367,5 +371,129 @@ func TestJsonConfig_EnvVarInjectionFromCollection_Ok(t *testing.T) {
 
 	if tc.Foo[0].Bar != expectedValue {
 		t.Fatalf("incorrect result. expected=%s actual=%s", expectedValue, tc.Foo[0].Bar)
+	}
+}
+
+type TestDataAbc struct {
+	Abc string `json:"abc"`
+}
+
+type TestDataXyz struct {
+	Xyz string `json:"xyz"`
+}
+
+type CustomUnmarshal struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
+
+func (c *CustomUnmarshal) UnmarshalJSON(b []byte) error {
+	tmp := struct {
+		Type string          `json:"type"`
+		Data json.RawMessage `json:"data"`
+	}{}
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return fmt.Errorf("json.Unmarshal: %w", err)
+	}
+
+	var data interface{}
+	switch tmp.Type {
+	case "abc":
+		data = &TestDataAbc{}
+	case "xyz":
+		data = &TestDataXyz{}
+	default:
+		return errors.New("unknown type")
+	}
+	if err := json.Unmarshal(tmp.Data, data); err != nil {
+		return fmt.Errorf("json.Unmarshal: %w", err)
+	}
+	c.Type = tmp.Type
+	c.Data = data
+	return nil
+}
+
+func TestJsonConfig_CustomUnmarshalInterface_Ok(t *testing.T) {
+	const json = `{
+		"custom_conf": {
+			"type": "abc",
+			"data": {
+				"abc": "cba"
+			}
+		}
+	}`
+
+	tc := struct {
+		CustomConf CustomUnmarshal `json:"custom_conf"`
+	}{}
+
+	err := envconf.Parse(&tc,
+		option.WithExternal(jsonconf.Json([]byte(json))),
+		option.WithLog(log.Default()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tc.CustomConf.Data.(*TestDataAbc).Abc != "cba" {
+		t.Fatalf("unexpected: '%v'", tc.CustomConf.Data.(*TestDataAbc).Abc)
+	}
+}
+
+func TestJsonConfig_InterfaceDefinedAsPtrStruct_Ok(t *testing.T) {
+	const json = `{
+		"foo": {
+			"bar": "wrong"
+		}
+	}`
+
+	tc := struct {
+		Foo interface{} `json:"foo"`
+	}{}
+
+	inner := struct {
+		Bar string `env:"TESTJSON_FOO_BAR" json:"bar"`
+	}{}
+	tc.Foo = &inner
+	const expectedFooBar = "foo_bar_abc"
+	os.Setenv("TESTJSON_FOO_BAR", expectedFooBar)
+	err := envconf.Parse(&tc,
+		option.WithExternal(jsonconf.Json([]byte(json))),
+		option.WithLog(log.Default()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inner.Bar != expectedFooBar {
+		t.Fatalf("incorrect result: expected=%s actual=%s", expectedFooBar, inner.Bar)
+	}
+}
+
+func TestJsonConfig_InterfaceInitInFlagParsed_Ok(t *testing.T) {
+	const json = `{
+		"foo": {
+			"bar": "wrong"
+		}
+	}`
+
+	tc := struct {
+		Foo interface{} `json:"foo"`
+	}{}
+
+	const expectedFooBar = "foo_bar_abc"
+	os.Setenv("TESTJSON_FOO_BAR", expectedFooBar)
+	inner := struct {
+		Bar string `env:"TESTJSON_FOO_BAR" json:"bar"`
+	}{}
+	err := envconf.Parse(&tc,
+		option.WithExternal(jsonconf.Json([]byte(json))),
+		option.WithLog(log.Default()),
+		option.WithFlagParsed(func() error {
+			tc.Foo = &inner
+			return nil
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inner.Bar != expectedFooBar {
+		t.Fatalf("incorrect result: expected=%s actual=%s", expectedFooBar, inner.Bar)
 	}
 }

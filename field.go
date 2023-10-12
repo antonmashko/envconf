@@ -76,11 +76,6 @@ func createFieldFromValue(v reflect.Value, f *configField) field {
 	case reflect.Struct:
 		return newStructType(v, f)
 	case reflect.Interface:
-		if v.IsNil() {
-			return &interfaceFieldType{
-				fieldType: newFieldType(v, f),
-			}
-		}
 		return newInterfaceType(v, f)
 	case reflect.Array, reflect.Slice:
 		return newSliceType(v, f)
