@@ -347,6 +347,32 @@ func TestJsonConfig_EnvVarInjection_Ok(t *testing.T) {
 	}
 }
 
+func TestJsonConfig_InjectionWithoutEnvVarDefaultValue_Ok(t *testing.T) {
+	json := `{
+		"foo": {
+			"bar": "${.env.JSON_TEST_ENVVAR_INJECTION}"
+		}
+	}`
+	tc := struct {
+		Foo struct {
+			Bar string `json:"bar" default:"foo_bar"`
+		}
+	}{}
+
+	expectedValue := "foo_bar"
+	err := envconf.Parse(&tc,
+		option.WithExternal(jsonconf.Json([]byte(json))),
+		option.WithExternalInjection(),
+	)
+	if err != nil {
+		t.Fatalf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo.Bar != expectedValue {
+		t.Fatalf("incorrect result. expected=%s actual=%s", expectedValue, tc.Foo.Bar)
+	}
+}
+
 func TestJsonConfig_EnvVarInjectionFromCollection_Ok(t *testing.T) {
 	json := `{
 		"foo": [{
