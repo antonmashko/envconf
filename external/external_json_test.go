@@ -201,6 +201,20 @@ func TestJsonConfig_IncorrectType_Err(t *testing.T) {
 	}
 }
 
+func TestJsonConfig_NilPointer_Ok(t *testing.T) {
+	json := `{"foo":null,"bar":null}`
+	tc := struct {
+		Foo *string     `json:"foo"`
+		Bar interface{} `json:"bar"`
+	}{}
+	if err := envconf.Parse(&tc, option.WithExternal(jsonconf.Json([]byte(json)))); err != nil {
+		t.Errorf("expected error but got nil")
+	}
+	if tc.Foo != nil || tc.Bar != nil {
+		t.Fatalf("unexpected result. expected nil got %v", tc)
+	}
+}
+
 func TestJsonConfig_Array_Ok(t *testing.T) {
 	json := `{"foo":[2, 3, 4, 5]}`
 	tc := struct {
