@@ -27,7 +27,6 @@ type Example struct {
 func main() {
 	var cfg Example
 	err := envconf.Parse(&cfg,
-		option.WithExternal(&json.Json{}),
 		option.WithLog(log.Default()),
 		option.WithFlagConfigFile("config", "./conf.json", "", func(b []byte) (external.External, error) {
 			return json.Json(b), nil
