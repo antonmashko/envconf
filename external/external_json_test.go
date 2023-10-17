@@ -201,7 +201,7 @@ func TestJsonConfig_IncorrectType_Err(t *testing.T) {
 	}
 }
 
-func TestJsonConfig_NilPointer_Ok(t *testing.T) {
+func TestJsonConfig_NilPointerNilInterface_Ok(t *testing.T) {
 	json := `{"foo":null,"bar":null}`
 	tc := struct {
 		Foo *string     `json:"foo"`
@@ -212,6 +212,21 @@ func TestJsonConfig_NilPointer_Ok(t *testing.T) {
 	}
 	if tc.Foo != nil || tc.Bar != nil {
 		t.Fatalf("unexpected result. expected nil got %v", tc)
+	}
+}
+
+func TestJsonConfig_NilPointerStruct_Ok(t *testing.T) {
+	json := `{"foo":null}`
+	tc := struct {
+		Foo *struct {
+			Bar string `json:"bar"`
+		} `json:"foo"`
+	}{}
+	if err := envconf.Parse(&tc, option.WithExternal(jsonconf.Json([]byte(json)))); err != nil {
+		t.Errorf("expected error but got nil")
+	}
+	if tc.Foo != nil {
+		t.Fatalf("unexpected result. expected nil got %v", *tc.Foo)
 	}
 }
 
