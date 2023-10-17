@@ -138,7 +138,11 @@ func (s *externalSource) Value() (interface{}, option.ConfigSource) {
 	str, cs = envInjF(str)
 	switch cs {
 	case option.EnvVariable:
-		return (&envSource{name: str}).Value()
+		v, cs = (&envSource{name: str}).Value()
+		if cs == option.NoConfigValue {
+			return nil, option.NoConfigValue
+		}
+		return v, option.EnvVariable
 	default:
 		return v, option.ExternalSource
 	}

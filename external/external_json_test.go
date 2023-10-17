@@ -201,6 +201,35 @@ func TestJsonConfig_IncorrectType_Err(t *testing.T) {
 	}
 }
 
+func TestJsonConfig_NilPointerNilInterface_Ok(t *testing.T) {
+	json := `{"foo":null,"bar":null}`
+	tc := struct {
+		Foo *string     `json:"foo"`
+		Bar interface{} `json:"bar"`
+	}{}
+	if err := envconf.Parse(&tc, option.WithExternal(jsonconf.Json([]byte(json)))); err != nil {
+		t.Errorf("expected error but got nil")
+	}
+	if tc.Foo != nil || tc.Bar != nil {
+		t.Fatalf("unexpected result. expected nil got %v", tc)
+	}
+}
+
+func TestJsonConfig_NilPointerStruct_Ok(t *testing.T) {
+	json := `{"foo":null}`
+	tc := struct {
+		Foo *struct {
+			Bar string `json:"bar"`
+		} `json:"foo"`
+	}{}
+	if err := envconf.Parse(&tc, option.WithExternal(jsonconf.Json([]byte(json)))); err != nil {
+		t.Errorf("expected error but got nil")
+	}
+	if tc.Foo != nil {
+		t.Fatalf("unexpected result. expected nil got %v", *tc.Foo)
+	}
+}
+
 func TestJsonConfig_Array_Ok(t *testing.T) {
 	json := `{"foo":[2, 3, 4, 5]}`
 	tc := struct {
@@ -334,6 +363,32 @@ func TestJsonConfig_EnvVarInjection_Ok(t *testing.T) {
 
 	expectedValue := "foo_bar"
 	os.Setenv("JSON_TEST_ENVVAR_INJECTION", expectedValue)
+	err := envconf.Parse(&tc,
+		option.WithExternal(jsonconf.Json([]byte(json))),
+		option.WithExternalInjection(),
+	)
+	if err != nil {
+		t.Fatalf("failed to external parse. err=%s", err)
+	}
+
+	if tc.Foo.Bar != expectedValue {
+		t.Fatalf("incorrect result. expected=%s actual=%s", expectedValue, tc.Foo.Bar)
+	}
+}
+
+func TestJsonConfig_InjectionWithoutEnvVarDefaultValue_Ok(t *testing.T) {
+	json := `{
+		"foo": {
+			"bar": "${.env.JSON_TEST_ENVVAR_INJECTION}"
+		}
+	}`
+	tc := struct {
+		Foo struct {
+			Bar string `json:"bar" default:"foo_bar"`
+		}
+	}{}
+
+	expectedValue := "foo_bar"
 	err := envconf.Parse(&tc,
 		option.WithExternal(jsonconf.Json([]byte(json))),
 		option.WithExternalInjection(),
